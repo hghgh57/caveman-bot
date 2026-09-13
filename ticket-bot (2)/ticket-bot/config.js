@@ -24,40 +24,43 @@ module.exports = {
   // and ping its own role. Leave pingRoleId as '' to only ping staffRoleId.
   ticketCategories: {
     support: {
-      categoryId: 'PUT_SUPPORT_CATEGORY_ID_HERE',
-      pingRoleId: 'PUT_SUPPORT_PING_ROLE_ID_HERE',
+      categoryId: '1534029665382170814',
+      pingRoleId: '1534029589569998888',
     },
     staff_report: {
-      categoryId: 'PUT_STAFF_REPORT_CATEGORY_ID_HERE',
-      pingRoleId: 'PUT_STAFF_REPORT_PING_ROLE_ID_HERE',
+      categoryId: '1534029678682181703',
+      pingRoleId: '1534029589569998888',
     },
     buy_sell_spawner: {
-      categoryId: 'PUT_BUY_SELL_SPAWNER_CATEGORY_ID_HERE',
-      pingRoleId: 'PUT_BUY_SELL_SPAWNER_PING_ROLE_ID_HERE',
+      categoryId: '1534029675804889108',
+      pingRoleId: '1534029589569998888',
     },
     giveaway_claim: {
       categoryId: 'PUT_GIVEAWAY_CLAIM_CATEGORY_ID_HERE',
-      pingRoleId: 'PUT_GIVEAWAY_CLAIM_PING_ROLE_ID_HERE',
+      pingRoleId: '1534029589569998888',
     },
     giveaway_sponsor: {
-      categoryId: 'PUT_GIVEAWAY_SPONSOR_CATEGORY_ID_HERE',
-      pingRoleId: 'PUT_GIVEAWAY_SPONSOR_PING_ROLE_ID_HERE',
+      categoryId: '1534029672407367690',
+      pingRoleId: '1534029589569998888',
     },
   },
 
   // Per-application-type settings. Keys must match the keys in
   // data/applicationQuestions.js (staff_helper, builder).
-  // - categoryId: which category channel the application channel is created under
-  // - pingRoleId: which role gets pinged when someone opens that application
+  // - reviewChannelId: an EXISTING channel (NOT a category) where finished
+  //   applications get posted with Accept/Decline buttons. Make this
+  //   staff-only — applicants never see it, they answer questions over DM
+  //   with the bot instead.
+  // - pingRoleId: role pinged in reviewChannelId when a submission lands
   // - acceptedRoleId: role given to the applicant when Accepted (leave '' to skip)
   applicationCategories: {
     staff_helper: {
-      categoryId: 'PUT_STAFF_APP_CATEGORY_ID_HERE',
-      pingRoleId: 'PUT_STAFF_APP_PING_ROLE_ID_HERE',
+      reviewChannelId: 'PUT_STAFF_APP_REVIEW_CHANNEL_ID_HERE',
+      pingRoleId: '1534029589569998888',
       acceptedRoleId: 'PUT_STAFF_ACCEPTED_ROLE_ID_HERE',
     },
     builder: {
-      categoryId: 'PUT_BUILDER_APP_CATEGORY_ID_HERE',
+      reviewChannelId: 'PUT_BUILDER_APP_REVIEW_CHANNEL_ID_HERE',
       pingRoleId: 'PUT_BUILDER_APP_PING_ROLE_ID_HERE',
       acceptedRoleId: 'PUT_BUILDER_ACCEPTED_ROLE_ID_HERE',
     },
