@@ -28,6 +28,9 @@ async function handleTicketOpen(interaction) {
   await interaction.deferReply({ ephemeral: true });
 
   const guild = interaction.guild;
+  const catCfg = config.ticketCategories[categoryId] || {};
+  const pingRoleId = catCfg.pingRoleId || config.staffRoleId;
+
   const channelName = `${categoryDef.id.replace(/_/g, '-')}-${interaction.user.username}`
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
@@ -54,11 +57,21 @@ async function handleTicketOpen(interaction) {
       ],
     });
   }
+  if (pingRoleId && pingRoleId !== config.staffRoleId) {
+    overwrites.push({
+      id: pingRoleId,
+      allow: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.ReadMessageHistory,
+      ],
+    });
+  }
 
   const channel = await guild.channels.create({
     name: channelName,
     type: ChannelType.GuildText,
-    parent: config.ticketCategoryId || undefined,
+    parent: catCfg.categoryId || undefined,
     permissionOverwrites: overwrites,
   });
 
@@ -78,8 +91,11 @@ async function handleTicketOpen(interaction) {
     new ButtonBuilder().setCustomId('ticket_close_btn').setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
   );
 
+  const pings = [`${interaction.user}`];
+  if (pingRoleId) pings.push(`<@&${pingRoleId}>`);
+
   await channel.send({
-    content: `${interaction.user}${config.staffRoleId ? ` <@&${config.staffRoleId}>` : ''}`,
+    content: pings.join(' '),
     embeds: [embed],
     components: [closeRow],
   });
