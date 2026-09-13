@@ -12,6 +12,14 @@ module.exports = {
   remove(channelId) {
     store.delete(channelId);
   },
+  // Merges `patch` into the existing meta for channelId (e.g. setting
+  // claimedBy, or linking an application to a ticket it opened).
+  update(channelId, patch) {
+    const current = store.get(channelId) || {};
+    const updated = { ...current, ...patch };
+    store.set(channelId, updated);
+    return updated;
+  },
   all() {
     return store.all();
   },
