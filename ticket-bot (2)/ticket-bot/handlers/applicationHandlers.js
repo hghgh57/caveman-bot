@@ -100,14 +100,22 @@ function reasonModal(customId, title) {
   return modal;
 }
 
+// Builds the "<applicant>'s submission has been <accepted/denied> successfully
+// by <staff>" line used both as the public confirmation and as the text
+// stamped on the review message once the buttons are disabled. Appends a
+// Reason line underneath when one was given.
+function decisionMessage(action, meta, actor, reason) {
+  let msg = `<@${meta.openerId}>'s submission has been **${action}** successfully by ${actor}.`;
+  if (reason) msg += `\n**Reason:** ${reason}`;
+  return msg;
+}
+
 // Disables every button on the review message and stamps it with the final
 // decision (and reason, if one was given). Works for both a plain button
 // interaction and a modal-submit interaction — both expose `.message`.
-async function finalizeDecision(interaction, resultLabel, reason) {
+async function finalizeDecision(interaction, action, meta, reason) {
   const disabledRow = buildDecisionRow(getAppId(interaction), { disabled: true });
-  const content = reason
-    ? `**${resultLabel}** by ${interaction.user}\n**Reason:** ${reason}`
-    : `**${resultLabel}** by ${interaction.user}`;
+  const content = decisionMessage(action, meta, interaction.user, reason);
   await interaction.message.edit({ content, components: [disabledRow] }).catch(() => {});
 }
 
@@ -134,8 +142,8 @@ async function processAccept(interaction, appId, meta, reason) {
     }
   }
 
-  await interaction.editReply(`✅ Application accepted by ${interaction.user}, <@${meta.openerId}>!${roleNote}`);
-  await finalizeDecision(interaction, 'Accepted', reason);
+  await interaction.editReply(decisionMessage('accepted', meta, interaction.user, reason) + roleNote);
+  await finalizeDecision(interaction, 'accepted', meta, reason);
   ticketStore.remove(appId);
 
   try {
@@ -150,11 +158,8 @@ async function processAccept(interaction, appId, meta, reason) {
 }
 
 async function processDeny(interaction, appId, meta, reason) {
-  const content = reason
-    ? `❌ Application denied by ${interaction.user}, <@${meta.openerId}>.\n**Reason:** ${reason}`
-    : `❌ Application denied by ${interaction.user}, <@${meta.openerId}>.`;
-  await interaction.reply(content);
-  await finalizeDecision(interaction, 'Denied', reason);
+  await interaction.reply(decisionMessage('denied', meta, interaction.user, reason));
+  await finalizeDecision(interaction, 'denied', meta, reason);
   ticketStore.remove(appId);
 
   try {
