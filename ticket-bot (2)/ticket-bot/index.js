@@ -8,7 +8,11 @@ const config = require('./config');
 const points = require('./utils/points');
 const { closeChannel } = require('./utils/ticketActions');
 const { handleTicketOpen } = require('./handlers/ticketHandlers');
-const { handleApplicationSelect } = require('./handlers/applicationHandlers');
+const {
+  handleApplicationSelect,
+  handleApplicationAccept,
+  handleApplicationDecline,
+} = require('./handlers/applicationHandlers');
 const { handleLeaderboardRoleSelect } = require('./handlers/leaderboardHandlers');
 
 const client = new Client({
@@ -46,6 +50,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
       if (interaction.customId === 'ticket_close_btn') {
         return await closeChannel(interaction);
+      }
+      if (interaction.customId === 'application_accept') {
+        return await handleApplicationAccept(interaction);
+      }
+      if (interaction.customId === 'application_decline') {
+        return await handleApplicationDecline(interaction);
       }
       // application_yes / application_no / application_cancel buttons are
       // consumed directly by the awaitMessageComponent collectors inside
