@@ -6,12 +6,17 @@ const cron = require('node-cron');
 
 const config = require('./config');
 const points = require('./utils/points');
-const { closeChannel } = require('./utils/ticketActions');
+const { closeChannel, claimTicket, unclaimTicket } = require('./utils/ticketActions');
 const { handleTicketOpen } = require('./handlers/ticketHandlers');
 const {
   handleApplicationSelect,
   handleApplicationAccept,
-  handleApplicationDecline,
+  handleApplicationAcceptReason,
+  handleApplicationAcceptReasonModal,
+  handleApplicationDeny,
+  handleApplicationDenyReason,
+  handleApplicationDenyReasonModal,
+  handleApplicationOpenTicket,
 } = require('./handlers/applicationHandlers');
 const { handleLeaderboardRoleSelect } = require('./handlers/leaderboardHandlers');
 
@@ -55,15 +60,46 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (interaction.customId === 'ticket_close_btn') {
         return await closeChannel(interaction);
       }
+      if (interaction.customId === 'ticket_claim_btn') {
+        return await claimTicket(interaction);
+      }
+      if (interaction.customId === 'ticket_unclaim_btn') {
+        return await unclaimTicket(interaction);
+      }
+      // Order matters: the "_reason" variants must be checked before their
+      // plain counterparts since e.g. 'application_accept_reason:' also
+      // starts with 'application_accept' (but not with 'application_accept:').
+      if (interaction.customId.startsWith('application_accept_reason:')) {
+        return await handleApplicationAcceptReason(interaction);
+      }
       if (interaction.customId.startsWith('application_accept:')) {
         return await handleApplicationAccept(interaction);
       }
-      if (interaction.customId.startsWith('application_decline:')) {
-        return await handleApplicationDecline(interaction);
+      if (interaction.customId.startsWith('application_deny_reason:')) {
+        return await handleApplicationDenyReason(interaction);
+      }
+      if (interaction.customId.startsWith('application_deny:')) {
+        return await handleApplicationDeny(interaction);
+      }
+      if (interaction.customId.startsWith('application_open_ticket:')) {
+        return await handleApplicationOpenTicket(interaction);
       }
       // application_yes / application_no / application_cancel buttons are
       // consumed directly by the awaitMessageComponent collectors inside
       // utils/applicationFlow.js — nothing to do for them here.
+      return;
+    }
+
+    if (interaction.isModalSubmit()) {
+      if (interaction.customId.startsWith('application_accept_reason_modal:')) {
+        return await handleApplicationAcceptReasonModal(interaction);
+      }
+      if (interaction.customId.startsWith('application_deny_reason_modal:')) {
+        return await handleApplicationDenyReasonModal(interaction);
+      }
+      // ticket_modal_* (the per-category intake form) is consumed directly
+      // by the awaitModalSubmit collector inside handlers/ticketHandlers.js
+      // — nothing to do for it here.
       return;
     }
 
