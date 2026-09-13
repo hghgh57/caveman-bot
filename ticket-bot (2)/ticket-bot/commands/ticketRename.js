@@ -1,38 +1,16 @@
-const {
-  SlashCommandBuilder,
-  PermissionFlagsBits,
-  EmbedBuilder,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-} = require('discord.js');
-const categories = require('../data/ticketCategories');
+const { SlashCommandBuilder } = require('discord.js');
+const { renameChannel } = require('../utils/ticketActions');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('ticket-panel')
-    .setDescription('Post the ticket creation panel in this channel')
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+    .setName('ticket-rename')
+    .setDescription('Rename the current ticket or application channel (staff only)')
+    .addStringOption((opt) =>
+      opt.setName('name').setDescription('New channel name').setRequired(true)
+    ),
 
   async execute(interaction) {
-    const embed = new EmbedBuilder()
-      .setTitle('Create a ticket')
-      .setColor(0x2b2d31)
-      .setDescription(
-        categories.map((c) => `${c.emoji} **${c.label}**\n${c.description}`).join('\n\n')
-      );
-
-    const row = new ActionRowBuilder().addComponents(
-      categories.map((c) =>
-        new ButtonBuilder()
-          .setCustomId(`ticket_open_${c.id}`)
-          .setLabel(c.label)
-          .setEmoji(c.emoji)
-          .setStyle(ButtonStyle.Secondary)
-      )
-    );
-
-    await interaction.channel.send({ embeds: [embed], components: [row] });
-    await interaction.reply({ content: 'Ticket panel posted.', ephemeral: true });
+    const newName = interaction.options.getString('name');
+    await renameChannel(interaction, newName);
   },
 };
