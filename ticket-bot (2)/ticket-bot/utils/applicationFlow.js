@@ -86,6 +86,37 @@ async function askQuestion(channel, userId, question, index, total) {
   return { answer: msg.content || '*(no text — attachment or empty message)*' };
 }
 
+// Builds the "Submission Stats" field shown under the answers on the review
+// embed: who submitted it, how long it took them, how long they've been in
+// the guild, and when it landed. `startedAt` is the timestamp (ms) from when
+// the applicant picked this application type in the panel — set in
+// handlers/applicationHandlers.js when the appId is first created.
+async function buildSubmissionStatsField(reviewChannel, user, startedAt) {
+  const durationSec = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+
+  let member = null;
+  try {
+    member = await reviewChannel.guild.members.fetch(user.id);
+  } catch {
+    // Applicant left the guild, or a fetch hiccup — just omit "Joined guild".
+  }
+
+  const lines = [
+    `**UserId:** ${user.id}`,
+    `**Username:** ${user.username}`,
+    `**User:** ${user}`,
+    `**Duration:** ${durationSec}s`,
+  ];
+
+  if (member?.joinedTimestamp) {
+    lines.push(`**Joined guild:** <t:${Math.floor(member.joinedTimestamp / 1000)}:R>`);
+  }
+
+  lines.push(`**Submitted:** <t:${Math.floor(Date.now() / 1000)}:R>`);
+
+  return { name: 'Submission Stats', value: lines.join('\n') };
+}
+
 // Walks the user through every question in `appConfig.questions` over DM,
 // then posts a summary embed with the Accept/Deny/Open-Ticket buttons into
 // `reviewChannel` (an existing staff-only channel) for staff to act on.
@@ -100,6 +131,9 @@ async function runApplicationFlow(dmChannel, user, appConfig, opts) {
   const { reviewChannel, pingRoleId, appId } = opts;
   const answers = [];
   const total = appConfig.questions.length;
+
+  const meta = ticketStore.get(appId) || {};
+  const startedAt = meta.openedAt || Date.now();
 
   for (let i = 0; i < total; i++) {
     const question = appConfig.questions[i];
@@ -122,11 +156,14 @@ async function runApplicationFlow(dmChannel, user, appConfig, opts) {
   // (handled later, from the review message) can show them in the ticket too.
   ticketStore.update(appId, { answers });
 
+  const statsField = await buildSubmissionStatsField(reviewChannel, user, startedAt);
+
   const embed = new EmbedBuilder()
     .setTitle(`${appConfig.label} — Submission`)
     .setColor(0x2b2d31)
     .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
     .setDescription(answers.map((a, i) => `**${i + 1}. ${a.question}**\n${a.answer}`).join('\n\n'))
+    .addFields(statsField)
     .setFooter({ text: `User ID: ${user.id}` })
     .setTimestamp();
 
