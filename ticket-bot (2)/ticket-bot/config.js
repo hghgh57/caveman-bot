@@ -20,6 +20,18 @@ module.exports = {
   ticketCategoryId: process.env.TICKET_CATEGORY_ID,
   applicationCategoryId: process.env.APPLICATION_CATEGORY_ID || process.env.TICKET_CATEGORY_ID,
 
+  // Role pinged when a new application channel is opened.
+  // Falls back to the staff role if not set separately.
+  applicationPingRoleId: process.env.APPLICATION_PING_ROLE_ID || process.env.STAFF_ROLE_ID,
+
+  // Role(s) given to an applicant when their application is accepted,
+  // keyed by application type (matches the keys in data/applicationQuestions.js).
+  // Leave a value blank/unset to skip giving a role for that type.
+  acceptedRoles: {
+    staff_helper: process.env.STAFF_ACCEPTED_ROLE_ID,
+    builder: process.env.BUILDER_ACCEPTED_ROLE_ID,
+  },
+
   // Timezone for the weekly points reset (Monday 1:00 AM).
   timezone: process.env.TIMEZONE || 'Europe/Berlin',
 };
