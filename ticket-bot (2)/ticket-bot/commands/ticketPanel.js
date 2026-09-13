@@ -1,0 +1,37 @@
+const {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+} = require('discord.js');
+const categories = require('../data/ticketCategories');
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('ticket-panel')
+    .setDescription('Post the ticket creation panel in this channel')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+
+  async execute(interaction) {
+    const embed = new EmbedBuilder()
+      .setTitle('Create a ticket')
+      .setColor(0x2b2d31)
+      .setDescription(
+        categories.map((c) => `${c.emoji} **${c.label}**\n${c.description}`).join('\n\n')
+      );
+
+    const row = new ActionRowBuilder().addComponents(
+      categories.map((c) =>
+        new ButtonBuilder()
+          .setCustomId(`ticket_open_${c.id}`)
+          .setLabel(c.label)
+          .setEmoji(c.emoji)
+          .setStyle(ButtonStyle.Secondary)
+      )
+    );
+
+    await interaction.reply({ embeds: [embed], components: [row] });
+  },
+};
