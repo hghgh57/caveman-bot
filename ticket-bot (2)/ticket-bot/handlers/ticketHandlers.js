@@ -1,6 +1,4 @@
 const {
-  PermissionFlagsBits,
-  ChannelType,
   EmbedBuilder,
   ActionRowBuilder,
   ButtonBuilder,
@@ -12,6 +10,7 @@ const {
 const config = require('../config');
 const ticketStore = require('../utils/ticketStore');
 const categories = require('../data/ticketCategories');
+const { createPrivateChannel } = require('../utils/ticketCreation');
 
 const MODAL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes to fill out the form
 
@@ -82,48 +81,12 @@ async function handleTicketOpen(interaction) {
   const catCfg = config.ticketCategories[categoryId] || {};
   const pingRoleId = catCfg.pingRoleId || config.staffRoleId;
 
-  const channelName = `${categoryDef.id.replace(/_/g, '-')}-${interaction.user.username}`
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '-')
-    .slice(0, 90);
-
-  const overwrites = [
-    { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-    {
-      id: interaction.user.id,
-      allow: [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.ReadMessageHistory,
-      ],
-    },
-  ];
-  if (config.staffRoleId) {
-    overwrites.push({
-      id: config.staffRoleId,
-      allow: [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.ReadMessageHistory,
-      ],
-    });
-  }
-  if (pingRoleId && pingRoleId !== config.staffRoleId) {
-    overwrites.push({
-      id: pingRoleId,
-      allow: [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.ReadMessageHistory,
-      ],
-    });
-  }
-
-  const channel = await guild.channels.create({
-    name: channelName,
-    type: ChannelType.GuildText,
-    parent: catCfg.categoryId || undefined,
-    permissionOverwrites: overwrites,
+  const { channel, rolesWithAccess } = await createPrivateChannel({
+    guild,
+    name: `${categoryDef.id.replace(/_/g, '-')}-${interaction.user.username}`,
+    parentId: catCfg.categoryId,
+    openerId: interaction.user.id,
+    roleIds: [config.staffRoleId, pingRoleId],
   });
 
   ticketStore.add(channel.id, {
@@ -131,6 +94,10 @@ async function handleTicketOpen(interaction) {
     category: categoryId,
     openerId: interaction.user.id,
     openedAt: Date.now(),
+    // Role ids that were granted SendMessages when this ticket was created —
+    // claim/unclaim toggles SendMessages on exactly these roles.
+    rolesWithAccess,
+    claimedBy: null,
   });
 
   const answersBlock = answers.length
@@ -145,7 +112,8 @@ async function handleTicketOpen(interaction) {
     )
     .setColor(0x2b2d31);
 
-  const closeRow = new ActionRowBuilder().addComponents(
+  const buttonsRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('ticket_claim_btn').setLabel('Claim').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('ticket_close_btn').setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
   );
 
@@ -155,7 +123,7 @@ async function handleTicketOpen(interaction) {
   await channel.send({
     content: pings.join(' '),
     embeds: [embed],
-    components: [closeRow],
+    components: [buttonsRow],
   });
 
   await modalInteraction.editReply({ content: `Your ticket has been created: ${channel}` });
