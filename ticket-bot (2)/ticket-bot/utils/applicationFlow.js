@@ -103,7 +103,12 @@ async function runApplicationFlow(channel, user, appConfig) {
     .setDescription(answers.map((a, i) => `**${i + 1}. ${a.question}**\n${a.answer}`).join('\n\n'))
     .setTimestamp();
 
-  await channel.send({ embeds: [embed] });
+  const decisionRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('application_accept').setLabel('Accept').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId('application_decline').setLabel('Decline').setStyle(ButtonStyle.Danger)
+  );
+
+  await channel.send({ embeds: [embed], components: [decisionRow] });
   await channel.send('Your application has been submitted. Staff will review it and follow up here.');
 }
 
