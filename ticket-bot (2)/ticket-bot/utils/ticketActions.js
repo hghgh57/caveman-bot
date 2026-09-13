@@ -8,6 +8,7 @@ const {
 const ticketStore = require('./ticketStore');
 const points = require('./points');
 const { isStaff } = require('./permissions');
+const { buildTranscript } = require('./transcript');
 
 const CLOSE_POINTS = 2;
 const RENAME_POINTS = 3;
@@ -22,11 +23,32 @@ async function closeChannel(interaction) {
     return interaction.reply({ content: 'This is not a ticket or application channel.', ephemeral: true });
   }
 
+  await interaction.reply(`${interaction.user} has closed this ticket, making transcript...`);
+
+  let transcript;
+  try {
+    transcript = await buildTranscript(interaction.channel);
+  } catch (err) {
+    console.error('Failed to build transcript:', err);
+  }
+
+  if (transcript && meta.openerId) {
+    try {
+      const opener = await interaction.client.users.fetch(meta.openerId);
+      await opener.send({
+        content: `Here's a transcript of your ticket **#${interaction.channel.name}**, closed by ${interaction.user.tag}.`,
+        files: [transcript],
+      });
+    } catch (err) {
+      console.error('Failed to DM transcript to ticket opener:', err);
+    }
+  }
+
   const newTotal = points.addPoints(interaction.user.id, CLOSE_POINTS);
   ticketStore.remove(interaction.channel.id);
 
-  await interaction.reply(
-    `This channel is closing. +${CLOSE_POINTS} points awarded to ${interaction.user} (total: ${newTotal}). Deleting in 5 seconds...`
+  await interaction.followUp(
+    `+${CLOSE_POINTS} points awarded to ${interaction.user} (total: ${newTotal}). Deleting in 5 seconds...`
   );
 
   setTimeout(() => {
