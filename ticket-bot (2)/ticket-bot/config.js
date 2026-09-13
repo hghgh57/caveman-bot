@@ -17,7 +17,7 @@ module.exports = {
   // Role allowed to use /ticket-close, /ticket-rename, /point-leaderboard,
   // and accept/decline applications. Also always gets access to every
   // ticket/application channel regardless of the per-type settings below.
-  staffRoleId: 'PUT_STAFF_ROLE_ID_HERE',
+  staffRoleId: '1534029589569998888',
 
   // Per-ticket-type settings. Keys must match the `id` values in
   // data/ticketCategories.js. Each one can go to its own category channel
@@ -55,14 +55,14 @@ module.exports = {
   // - acceptedRoleId: role given to the applicant when Accepted (leave '' to skip)
   applicationCategories: {
     staff_helper: {
-      reviewChannelId: 'PUT_STAFF_APP_REVIEW_CHANNEL_ID_HERE',
-      pingRoleId: '1534029589569998888',
-      acceptedRoleId: 'PUT_STAFF_ACCEPTED_ROLE_ID_HERE',
+      reviewChannelId: '1534029928683798640',
+      pingRoleId: '1534029586231332986',
+      acceptedRoleId: '1535942602258522132',
     },
     builder: {
-      reviewChannelId: 'PUT_BUILDER_APP_REVIEW_CHANNEL_ID_HERE',
-      pingRoleId: 'PUT_BUILDER_APP_PING_ROLE_ID_HERE',
-      acceptedRoleId: 'PUT_BUILDER_ACCEPTED_ROLE_ID_HERE',
+      reviewChannelId: '1534029932563529828',
+      pingRoleId: '1534029586231332986',
+      acceptedRoleId: '1535942667375087639',
     },
   },
 
