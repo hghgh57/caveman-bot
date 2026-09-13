@@ -1,9 +1,19 @@
 const crypto = require('crypto');
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const {
+  EmbedBuilder,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+} = require('discord.js');
 const config = require('../config');
 const ticketStore = require('../utils/ticketStore');
 const applicationQuestions = require('../data/applicationQuestions');
 const { runApplicationFlow } = require('../utils/applicationFlow');
+const { buildDecisionRow } = require('../utils/applicationDecision');
+const { createPrivateChannel } = require('../utils/ticketCreation');
 const { isStaff } = require('../utils/permissions');
 
 async function handleApplicationSelect(interaction) {
@@ -74,35 +84,41 @@ async function handleApplicationSelect(interaction) {
   });
 }
 
-// Disables the Accept/Decline buttons on the message they were clicked from,
-// so staff can't double-click and double-assign roles / double-DM.
-async function disableDecisionButtons(interaction, resultLabel) {
-  const disabledRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('application_accept_done').setLabel('Accept').setStyle(ButtonStyle.Success).setDisabled(true),
-    new ButtonBuilder().setCustomId('application_decline_done').setLabel('Decline').setStyle(ButtonStyle.Danger).setDisabled(true)
-  );
-  await interaction.message
-    .edit({ content: `**${resultLabel}** by ${interaction.user}`, components: [disabledRow] })
-    .catch(() => {});
-}
-
 function getAppId(interaction) {
   return interaction.customId.split(':')[1];
 }
 
-async function handleApplicationAccept(interaction) {
-  if (!isStaff(interaction.member)) {
-    return interaction.reply({ content: 'Only staff can accept/decline applications.', ephemeral: true });
-  }
+function reasonModal(customId, title) {
+  const modal = new ModalBuilder().setCustomId(customId).setTitle(title);
+  const reasonInput = new TextInputBuilder()
+    .setCustomId('reason')
+    .setLabel('Reason')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(1000);
+  modal.addComponents(new ActionRowBuilder().addComponents(reasonInput));
+  return modal;
+}
 
+// Disables every button on the review message and stamps it with the final
+// decision (and reason, if one was given). Works for both a plain button
+// interaction and a modal-submit interaction — both expose `.message`.
+async function finalizeDecision(interaction, resultLabel, reason) {
+  const disabledRow = buildDecisionRow(getAppId(interaction), { disabled: true });
+  const content = reason
+    ? `**${resultLabel}** by ${interaction.user}\n**Reason:** ${reason}`
+    : `**${resultLabel}** by ${interaction.user}`;
+  await interaction.message.edit({ content, components: [disabledRow] }).catch(() => {});
+}
+
+function getOpenApplication(interaction) {
   const appId = getAppId(interaction);
   const meta = ticketStore.get(appId);
-  if (!meta || meta.type !== 'application') {
-    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
-  }
+  if (!meta || meta.type !== 'application') return { appId, meta: null };
+  return { appId, meta };
+}
 
-  await interaction.deferReply();
-
+async function processAccept(interaction, appId, meta, reason) {
   const appCfg = config.applicationCategories[meta.category] || {};
   const roleId = appCfg.acceptedRoleId;
   let roleNote = '';
@@ -119,38 +135,182 @@ async function handleApplicationAccept(interaction) {
   }
 
   await interaction.editReply(`✅ Application accepted by ${interaction.user}, <@${meta.openerId}>!${roleNote}`);
-  await disableDecisionButtons(interaction, 'Accepted');
+  await finalizeDecision(interaction, 'Accepted', reason);
   ticketStore.remove(appId);
 
   try {
     const applicant = await interaction.client.users.fetch(meta.openerId);
-    await applicant.send('🎉 Your application has been **accepted**! Staff will follow up if there are next steps.');
+    const msg = reason
+      ? `🎉 Your application has been **accepted**!\n**Reason:** ${reason}`
+      : '🎉 Your application has been **accepted**! Staff will follow up if there are next steps.';
+    await applicant.send(msg);
   } catch {
     // Applicant has DMs closed — nothing more we can do.
   }
 }
 
-async function handleApplicationDecline(interaction) {
+async function processDeny(interaction, appId, meta, reason) {
+  const content = reason
+    ? `❌ Application denied by ${interaction.user}, <@${meta.openerId}>.\n**Reason:** ${reason}`
+    : `❌ Application denied by ${interaction.user}, <@${meta.openerId}>.`;
+  await interaction.reply(content);
+  await finalizeDecision(interaction, 'Denied', reason);
+  ticketStore.remove(appId);
+
+  try {
+    const applicant = await interaction.client.users.fetch(meta.openerId);
+    const msg = reason
+      ? `Your application was **denied**.\n**Reason:** ${reason}`
+      : "Your application was **denied**. You're welcome to apply again in the future.";
+    await applicant.send(msg);
+  } catch {
+    // Applicant has DMs closed — nothing more we can do.
+  }
+}
+
+async function handleApplicationAccept(interaction) {
   if (!isStaff(interaction.member)) {
-    return interaction.reply({ content: 'Only staff can accept/decline applications.', ephemeral: true });
+    return interaction.reply({ content: 'Only staff can accept/deny applications.', ephemeral: true });
+  }
+  const { appId, meta } = getOpenApplication(interaction);
+  if (!meta) {
+    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+  }
+  await interaction.deferReply();
+  await processAccept(interaction, appId, meta, null);
+}
+
+async function handleApplicationAcceptReason(interaction) {
+  if (!isStaff(interaction.member)) {
+    return interaction.reply({ content: 'Only staff can accept/deny applications.', ephemeral: true });
+  }
+  const { appId, meta } = getOpenApplication(interaction);
+  if (!meta) {
+    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+  }
+  await interaction.showModal(reasonModal(`application_accept_reason_modal:${appId}`, 'Accept with Reason'));
+}
+
+async function handleApplicationAcceptReasonModal(interaction) {
+  const { appId, meta } = getOpenApplication(interaction);
+  if (!meta) {
+    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+  }
+  await interaction.deferReply();
+  const reason = interaction.fields.getTextInputValue('reason');
+  await processAccept(interaction, appId, meta, reason);
+}
+
+async function handleApplicationDeny(interaction) {
+  if (!isStaff(interaction.member)) {
+    return interaction.reply({ content: 'Only staff can accept/deny applications.', ephemeral: true });
+  }
+  const { appId, meta } = getOpenApplication(interaction);
+  if (!meta) {
+    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+  }
+  await processDeny(interaction, appId, meta, null);
+}
+
+async function handleApplicationDenyReason(interaction) {
+  if (!isStaff(interaction.member)) {
+    return interaction.reply({ content: 'Only staff can accept/deny applications.', ephemeral: true });
+  }
+  const { appId, meta } = getOpenApplication(interaction);
+  if (!meta) {
+    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+  }
+  await interaction.showModal(reasonModal(`application_deny_reason_modal:${appId}`, 'Deny with Reason'));
+}
+
+async function handleApplicationDenyReasonModal(interaction) {
+  const { appId, meta } = getOpenApplication(interaction);
+  if (!meta) {
+    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+  }
+  const reason = interaction.fields.getTextInputValue('reason');
+  await processDeny(interaction, appId, meta, reason);
+}
+
+// "Open a Ticket" — pulls the applicant into a private ticket channel under
+// the category configured for their application type (config.js ->
+// applicationCategories.<type>.ticketCategoryId), pinging the same role that
+// gets pinged for that application type. This ticket has no Claim button.
+async function handleApplicationOpenTicket(interaction) {
+  if (!isStaff(interaction.member)) {
+    return interaction.reply({ content: 'Only staff can open a ticket for an application.', ephemeral: true });
   }
 
-  const appId = getAppId(interaction);
-  const meta = ticketStore.get(appId);
-  if (!meta || meta.type !== 'application') {
+  const { appId, meta } = getOpenApplication(interaction);
+  if (!meta) {
     return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
   }
 
-  await interaction.reply(`❌ Application declined by ${interaction.user}, <@${meta.openerId}>.`);
-  await disableDecisionButtons(interaction, 'Declined');
-  ticketStore.remove(appId);
-
-  try {
-    const applicant = await interaction.client.users.fetch(meta.openerId);
-    await applicant.send("Your application was **declined**. You're welcome to apply again in the future.");
-  } catch {
-    // Applicant has DMs closed — nothing more we can do.
+  if (meta.ticketChannelId) {
+    return interaction.reply({
+      content: `A ticket is already open for this application: <#${meta.ticketChannelId}>`,
+      ephemeral: true,
+    });
   }
+
+  await interaction.deferReply({ ephemeral: true });
+
+  const appConfig = applicationQuestions[meta.category];
+  const appCfg = config.applicationCategories[meta.category] || {};
+  const applicant = await interaction.client.users.fetch(meta.openerId).catch(() => null);
+
+  const { channel, rolesWithAccess } = await createPrivateChannel({
+    guild: interaction.guild,
+    name: `${appConfig.prefix}-${applicant ? applicant.username : meta.openerId}`,
+    parentId: appCfg.ticketCategoryId,
+    openerId: meta.openerId,
+    roleIds: [config.staffRoleId, appCfg.pingRoleId],
+  });
+
+  const answersBlock = (meta.answers || [])
+    .map((a, i) => `**${i + 1}. ${a.question}**\n${a.answer}`)
+    .join('\n\n');
+
+  const embed = new EmbedBuilder()
+    .setTitle(`${appConfig.label} — Ticket`)
+    .setDescription(
+      `<@${meta.openerId}>, staff have opened a ticket to follow up on your application.${answersBlock ? `\n\n${answersBlock}` : ''}`
+    )
+    .setColor(0x2b2d31);
+
+  // No Claim button here on purpose — application ticket, not a support ticket.
+  const closeRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('ticket_close_btn').setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
+  );
+
+  const pings = [`<@${meta.openerId}>`];
+  if (appCfg.pingRoleId) pings.push(`<@&${appCfg.pingRoleId}>`);
+
+  await channel.send({ content: pings.join(' '), embeds: [embed], components: [closeRow] });
+
+  ticketStore.add(channel.id, {
+    type: 'ticket',
+    category: `${meta.category}_application`,
+    openerId: meta.openerId,
+    openedAt: Date.now(),
+    rolesWithAccess,
+    claimedBy: null,
+  });
+
+  ticketStore.update(appId, { ticketChannelId: channel.id });
+
+  await interaction.message.edit({ components: [buildDecisionRow(appId, { ticketOpened: true })] }).catch(() => {});
+
+  await interaction.editReply(`Ticket created: ${channel}`);
 }
 
-module.exports = { handleApplicationSelect, handleApplicationAccept, handleApplicationDecline };
+module.exports = {
+  handleApplicationSelect,
+  handleApplicationAccept,
+  handleApplicationAcceptReason,
+  handleApplicationAcceptReasonModal,
+  handleApplicationDeny,
+  handleApplicationDenyReason,
+  handleApplicationDenyReasonModal,
+  handleApplicationOpenTicket,
+};
