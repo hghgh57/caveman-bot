@@ -5,10 +5,57 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } = require('discord.js');
 const config = require('../config');
 const ticketStore = require('../utils/ticketStore');
 const categories = require('../data/ticketCategories');
+
+const MODAL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes to fill out the form
+
+// Shows the intake form for categories that have `questions` and waits for
+// the user to submit it. Returns { modalInteraction, answers } on success,
+// or null if they closed the form / it timed out (nothing left to do then).
+async function collectAnswers(interaction, categoryDef) {
+  const questions = categoryDef.questions || [];
+  if (!questions.length) {
+    return { modalInteraction: interaction, answers: [] };
+  }
+
+  const modal = new ModalBuilder()
+    .setCustomId(`ticket_modal_${categoryDef.id}`)
+    .setTitle(categoryDef.label.slice(0, 45));
+
+  questions.forEach((question, i) => {
+    const input = new TextInputBuilder()
+      .setCustomId(`q${i}`)
+      .setLabel(question.slice(0, 45))
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(true)
+      .setMaxLength(1000);
+    modal.addComponents(new ActionRowBuilder().addComponents(input));
+  });
+
+  await interaction.showModal(modal);
+
+  const modalInteraction = await interaction
+    .awaitModalSubmit({
+      filter: (i) => i.customId === `ticket_modal_${categoryDef.id}` && i.user.id === interaction.user.id,
+      time: MODAL_TIMEOUT_MS,
+    })
+    .catch(() => null);
+
+  if (!modalInteraction) return null;
+
+  const answers = questions.map((question, i) => ({
+    question,
+    answer: modalInteraction.fields.getTextInputValue(`q${i}`),
+  }));
+
+  return { modalInteraction, answers };
+}
 
 async function handleTicketOpen(interaction) {
   const categoryId = interaction.customId.replace('ticket_open_', '');
@@ -25,7 +72,11 @@ async function handleTicketOpen(interaction) {
     });
   }
 
-  await interaction.deferReply({ ephemeral: true });
+  const collected = await collectAnswers(interaction, categoryDef);
+  if (!collected) return; // form closed / timed out — nothing more to do
+  const { modalInteraction, answers } = collected;
+
+  await modalInteraction.deferReply({ ephemeral: true });
 
   const guild = interaction.guild;
   const catCfg = config.ticketCategories[categoryId] || {};
@@ -82,9 +133,16 @@ async function handleTicketOpen(interaction) {
     openedAt: Date.now(),
   });
 
+  const answersBlock = answers.length
+    ? '\n\n' + answers.map((a) => `**${a.question}**\n${a.answer}`).join('\n\n')
+    : '';
+  const notesBlock = categoryDef.notes ? `\n\n⚠️ ${categoryDef.notes}` : '';
+
   const embed = new EmbedBuilder()
     .setTitle(`${categoryDef.emoji} ${categoryDef.label}`)
-    .setDescription(`${interaction.user}, thanks for opening a ticket.\n\n${categoryDef.description}\n\nStaff will be with you shortly.`)
+    .setDescription(
+      `${interaction.user}, thanks for opening a ticket.\n\n${categoryDef.description}${notesBlock}${answersBlock}\n\nStaff will be with you shortly.`
+    )
     .setColor(0x2b2d31);
 
   const closeRow = new ActionRowBuilder().addComponents(
@@ -100,7 +158,7 @@ async function handleTicketOpen(interaction) {
     components: [closeRow],
   });
 
-  await interaction.editReply({ content: `Your ticket has been created: ${channel}` });
+  await modalInteraction.editReply({ content: `Your ticket has been created: ${channel}` });
 }
 
 module.exports = { handleTicketOpen };
