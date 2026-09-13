@@ -5,6 +5,7 @@ const {
   EmbedBuilder,
 } = require('discord.js');
 const ticketStore = require('./ticketStore');
+const { buildDecisionRow } = require('./applicationDecision');
 
 const QUESTION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes per question
 
@@ -22,12 +23,21 @@ function yesNoRow() {
   );
 }
 
+function questionEmbed(question, index, total) {
+  return new EmbedBuilder()
+    .setTitle(`Question ${index} of ${total}`)
+    .setDescription(question.text)
+    .setColor(0x2b2d31);
+}
+
 // Asks a single question in `channel` (the applicant's DM channel) and waits
 // for `userId` to answer it, either by typing a message or (for yes/no
 // questions) pressing a button. A Cancel button is always available underneath.
-async function askQuestion(channel, userId, question) {
+async function askQuestion(channel, userId, question, index, total) {
+  const embed = questionEmbed(question, index, total);
+
   if (question.type === 'yesno') {
-    const qMsg = await channel.send({ content: question.text, components: [yesNoRow()] });
+    const qMsg = await channel.send({ embeds: [embed], components: [yesNoRow()] });
 
     const btnInteraction = await qMsg
       .awaitMessageComponent({
@@ -47,7 +57,7 @@ async function askQuestion(channel, userId, question) {
     return { answer: btnInteraction.customId === 'application_yes' ? 'Yes' : 'No' };
   }
 
-  const qMsg = await channel.send({ content: question.text, components: [cancelRow()] });
+  const qMsg = await channel.send({ embeds: [embed], components: [cancelRow()] });
 
   const messagePromise = channel
     .awaitMessages({ filter: (m) => m.author.id === userId, max: 1, time: QUESTION_TIMEOUT_MS })
@@ -77,21 +87,23 @@ async function askQuestion(channel, userId, question) {
 }
 
 // Walks the user through every question in `appConfig.questions` over DM,
-// then posts a summary embed with Accept/Decline buttons into `reviewChannel`
-// (an existing staff-only channel) for staff to act on.
+// then posts a summary embed with the Accept/Deny/Open-Ticket buttons into
+// `reviewChannel` (an existing staff-only channel) for staff to act on.
 //
 // `opts`:
 //   - reviewChannel: the guild channel to post the finished submission to
 //   - pingRoleId: role to ping in reviewChannel when a submission lands (optional)
-//   - appId: unique id for this application, used to tie the Accept/Decline
-//            buttons back to the right applicant since many submissions can
-//            share the same reviewChannel
+//   - appId: unique id for this application, used to tie the buttons back to
+//            the right applicant since many submissions can share the same
+//            reviewChannel
 async function runApplicationFlow(dmChannel, user, appConfig, opts) {
   const { reviewChannel, pingRoleId, appId } = opts;
   const answers = [];
+  const total = appConfig.questions.length;
 
-  for (const question of appConfig.questions) {
-    const result = await askQuestion(dmChannel, user.id, question);
+  for (let i = 0; i < total; i++) {
+    const question = appConfig.questions[i];
+    const result = await askQuestion(dmChannel, user.id, question, i + 1, total);
 
     if (result.cancelled) {
       await dmChannel.send(
@@ -106,6 +118,10 @@ async function runApplicationFlow(dmChannel, user, appConfig, opts) {
     answers.push({ question: question.text, answer: result.answer });
   }
 
+  // Save the answers on the application's meta so the "Open a Ticket" button
+  // (handled later, from the review message) can show them in the ticket too.
+  ticketStore.update(appId, { answers });
+
   const embed = new EmbedBuilder()
     .setTitle(`${appConfig.label} — Submission`)
     .setColor(0x2b2d31)
@@ -114,15 +130,10 @@ async function runApplicationFlow(dmChannel, user, appConfig, opts) {
     .setFooter({ text: `User ID: ${user.id}` })
     .setTimestamp();
 
-  const decisionRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`application_accept:${appId}`).setLabel('Accept').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId(`application_decline:${appId}`).setLabel('Decline').setStyle(ButtonStyle.Danger)
-  );
-
   await reviewChannel.send({
     content: pingRoleId ? `<@&${pingRoleId}>` : undefined,
     embeds: [embed],
-    components: [decisionRow],
+    components: [buildDecisionRow(appId)],
   });
 
   await dmChannel.send('Your application has been submitted. Staff will review it and follow up with you here.');
