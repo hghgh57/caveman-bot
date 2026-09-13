@@ -1,28 +1,25 @@
-// Fill these in directly. No .env / Railway variables needed.
+// Reads config from environment variables (Railway -> your service -> Variables tab).
+// For local development, you can optionally create a .env file with the same
+// names and it'll be picked up automatically if the "dotenv" package is installed.
+try {
+  require('dotenv').config();
+} catch {
+  // dotenv not installed - fine on Railway, where variables are injected directly.
+}
 
 module.exports = {
-  // Discord Developer Portal -> Bot -> Reset Token
-  token: 'PUT_YOUR_BOT_TOKEN_HERE',
-
-  // Discord Developer Portal -> General Information -> Application ID
-  clientId: 'PUT_YOUR_CLIENT_ID_HERE',
-
-  // Right-click your server icon (Developer Mode on) -> Copy Server ID
-  guildId: 'PUT_YOUR_GUILD_ID_HERE',
+  token: process.env.BOT_TOKEN,
+  clientId: process.env.CLIENT_ID,
+  guildId: process.env.GUILD_ID,
 
   // Role allowed to use /ticket-close, /ticket-rename, /point-leaderboard,
   // and pinged whenever a ticket/application opens.
-  // Right-click the role -> Copy Role ID
-  staffRoleId: 'PUT_YOUR_STAFF_ROLE_ID_HERE',
+  staffRoleId: process.env.STAFF_ROLE_ID,
 
-  // Category channels new ticket/application channels get created under.
-  // Right-click a category -> Copy Channel ID. Leave as '' to create at top level.
-  ticketCategoryId: '',
-  applicationCategoryId: '', // leave '' to fall back to ticketCategoryId below
+  // Category channels that new ticket/application channels get created under.
+  ticketCategoryId: process.env.TICKET_CATEGORY_ID,
+  applicationCategoryId: process.env.APPLICATION_CATEGORY_ID || process.env.TICKET_CATEGORY_ID,
 
   // Timezone for the weekly points reset (Monday 1:00 AM).
-  timezone: 'Europe/Berlin',
+  timezone: process.env.TIMEZONE || 'Europe/Berlin',
 };
-
-// Falls back to ticketCategoryId if applicationCategoryId is left blank.
-module.exports.applicationCategoryId = module.exports.applicationCategoryId || module.exports.ticketCategoryId;
