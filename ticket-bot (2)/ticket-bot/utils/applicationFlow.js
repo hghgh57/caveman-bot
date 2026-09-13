@@ -4,6 +4,7 @@ const {
   ButtonStyle,
   EmbedBuilder,
 } = require('discord.js');
+const ticketStore = require('./ticketStore');
 
 const QUESTION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes per question
 
@@ -21,9 +22,9 @@ function yesNoRow() {
   );
 }
 
-// Asks a single question in `channel` and waits for `userId` to answer it,
-// either by typing a message or (for yes/no questions) pressing a button.
-// A Cancel button is always available underneath.
+// Asks a single question in `channel` (the applicant's DM channel) and waits
+// for `userId` to answer it, either by typing a message or (for yes/no
+// questions) pressing a button. A Cancel button is always available underneath.
 async function askQuestion(channel, userId, question) {
   if (question.type === 'yesno') {
     const qMsg = await channel.send({ content: question.text, components: [yesNoRow()] });
@@ -75,21 +76,30 @@ async function askQuestion(channel, userId, question) {
   return { answer: msg.content || '*(no text — attachment or empty message)*' };
 }
 
-// Walks the user through every question in `appConfig.questions`, then posts
-// a summary embed in the same channel for staff to review.
-async function runApplicationFlow(channel, user, appConfig) {
+// Walks the user through every question in `appConfig.questions` over DM,
+// then posts a summary embed with Accept/Decline buttons into `reviewChannel`
+// (an existing staff-only channel) for staff to act on.
+//
+// `opts`:
+//   - reviewChannel: the guild channel to post the finished submission to
+//   - pingRoleId: role to ping in reviewChannel when a submission lands (optional)
+//   - appId: unique id for this application, used to tie the Accept/Decline
+//            buttons back to the right applicant since many submissions can
+//            share the same reviewChannel
+async function runApplicationFlow(dmChannel, user, appConfig, opts) {
+  const { reviewChannel, pingRoleId, appId } = opts;
   const answers = [];
 
   for (const question of appConfig.questions) {
-    const result = await askQuestion(channel, user.id, question);
+    const result = await askQuestion(dmChannel, user.id, question);
 
     if (result.cancelled) {
-      await channel.send(
+      await dmChannel.send(
         result.timedOut
-          ? 'This application timed out due to inactivity. This channel will be deleted shortly.'
-          : 'This application was cancelled. This channel will be deleted shortly.'
+          ? 'This application timed out due to inactivity.'
+          : 'This application was cancelled.'
       );
-      setTimeout(() => channel.delete().catch(() => {}), 5000);
+      ticketStore.remove(appId);
       return;
     }
 
@@ -101,15 +111,21 @@ async function runApplicationFlow(channel, user, appConfig) {
     .setColor(0x2b2d31)
     .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
     .setDescription(answers.map((a, i) => `**${i + 1}. ${a.question}**\n${a.answer}`).join('\n\n'))
+    .setFooter({ text: `User ID: ${user.id}` })
     .setTimestamp();
 
   const decisionRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('application_accept').setLabel('Accept').setStyle(ButtonStyle.Success),
-    new ButtonBuilder().setCustomId('application_decline').setLabel('Decline').setStyle(ButtonStyle.Danger)
+    new ButtonBuilder().setCustomId(`application_accept:${appId}`).setLabel('Accept').setStyle(ButtonStyle.Success),
+    new ButtonBuilder().setCustomId(`application_decline:${appId}`).setLabel('Decline').setStyle(ButtonStyle.Danger)
   );
 
-  await channel.send({ embeds: [embed], components: [decisionRow] });
-  await channel.send('Your application has been submitted. Staff will review it and follow up here.');
+  await reviewChannel.send({
+    content: pingRoleId ? `<@&${pingRoleId}>` : undefined,
+    embeds: [embed],
+    components: [decisionRow],
+  });
+
+  await dmChannel.send('Your application has been submitted. Staff will review it and follow up with you here.');
 }
 
 module.exports = { runApplicationFlow };
