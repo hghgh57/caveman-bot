@@ -1,7 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
-const { Client, GatewayIntentBits, Collection, Events } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection, Events } = require('discord.js');
 const cron = require('node-cron');
 
 const config = require('./config');
@@ -19,9 +19,13 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.DirectMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMembers,
   ],
+  // Needed so DM channels/messages arrive properly — applications are now
+  // answered over DM instead of in a per-applicant guild channel.
+  partials: [Partials.Channel, Partials.Message],
 });
 
 // Load slash commands
@@ -51,10 +55,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (interaction.customId === 'ticket_close_btn') {
         return await closeChannel(interaction);
       }
-      if (interaction.customId === 'application_accept') {
+      if (interaction.customId.startsWith('application_accept:')) {
         return await handleApplicationAccept(interaction);
       }
-      if (interaction.customId === 'application_decline') {
+      if (interaction.customId.startsWith('application_decline:')) {
         return await handleApplicationDecline(interaction);
       }
       // application_yes / application_no / application_cancel buttons are
