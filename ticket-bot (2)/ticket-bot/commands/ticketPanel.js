@@ -32,6 +32,7 @@ module.exports = {
       )
     );
 
-    await interaction.reply({ embeds: [embed], components: [row] });
+    await interaction.channel.send({ embeds: [embed], components: [row] });
+    await interaction.reply({ content: 'Ticket panel posted.', ephemeral: true });
   },
 };
