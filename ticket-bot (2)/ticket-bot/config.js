@@ -51,18 +51,25 @@ module.exports = {
   //   applications get posted with Accept/Decline buttons. Make this
   //   staff-only — applicants never see it, they answer questions over DM
   //   with the bot instead.
-  // - pingRoleId: role pinged in reviewChannelId when a submission lands
+  // - pingRoleId: role pinged in reviewChannelId when a submission lands,
+  //   and also the role pinged in the ticket created by the "Open a Ticket"
+  //   button on an application
   // - acceptedRoleId: role given to the applicant when Accepted (leave '' to skip)
+  // - ticketCategoryId: category the "Open a Ticket" button creates its
+  //   channel under (staff can open this from the application review message
+  //   to pull the applicant into a channel before deciding)
   applicationCategories: {
     staff_helper: {
       reviewChannelId: '1534029928683798640',
       pingRoleId: '1534029586231332986',
       acceptedRoleId: '1535942602258522132',
+      ticketCategoryId: '1534029715382210560',
     },
     builder: {
       reviewChannelId: '1534029932563529828',
       pingRoleId: '1534029586231332986',
       acceptedRoleId: '1535942667375087639',
+      ticketCategoryId: '1534029711917842472',
     },
   },
 
