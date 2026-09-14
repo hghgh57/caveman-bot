@@ -23,4 +23,25 @@ function parseEmoji(emoji) {
   return { id, name, animated: Boolean(animated) };
 }
 
-module.exports = { parseEmoji };
+// Slash-command text options (like /embed's title/description/footer) don't
+// get the same treatment as the normal message box: if you type or paste a
+// custom emoji there, Discord doesn't expand it into the <:name:id> tag —
+// it stays as the literal shortcode ":name:", which is why it looks fine
+// while you're typing (the picker shows a preview) but posts as plain text.
+//
+// This scans a string for :name: shortcodes and swaps in the guild's real
+// emoji tag when one matches, so the description renders properly once sent.
+// Unmatched shortcodes (typos, emoji from another server) are left as-is.
+//
+// resolveEmojiShortcodes(guild, 'Use :ticketcoupon: for a discount')
+//   -> 'Use <:ticketcoupon:1268607173936676958> for a discount'
+function resolveEmojiShortcodes(guild, text) {
+  if (!text || !guild) return text;
+
+  return text.replace(/:(\w+):/g, (full, name) => {
+    const emoji = guild.emojis.cache.find((e) => e.name === name);
+    return emoji ? emoji.toString() : full;
+  });
+}
+
+module.exports = { parseEmoji, resolveEmojiShortcodes };
