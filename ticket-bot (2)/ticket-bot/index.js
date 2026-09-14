@@ -6,7 +6,13 @@ const cron = require('node-cron');
 
 const config = require('./config');
 const points = require('./utils/points');
-const { closeChannel, claimTicket, unclaimTicket } = require('./utils/ticketActions');
+const {
+  closeChannel,
+  claimTicket,
+  unclaimTicket,
+  handleRenameButton,
+  handleRenameModalSubmit,
+} = require('./utils/ticketActions');
 const { handleTicketOpen } = require('./handlers/ticketHandlers');
 const {
   handleApplicationSelect,
@@ -66,6 +72,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
       if (interaction.customId === 'ticket_unclaim_btn') {
         return await unclaimTicket(interaction);
       }
+      if (interaction.customId === 'ticket_rename_btn') {
+        return await handleRenameButton(interaction);
+      }
       // Order matters: the "_reason" variants must be checked before their
       // plain counterparts since e.g. 'application_accept_reason:' also
       // starts with 'application_accept' (but not with 'application_accept:').
@@ -91,6 +100,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (interaction.isModalSubmit()) {
+      if (interaction.customId === 'ticket_rename_modal') {
+        return await handleRenameModalSubmit(interaction);
+      }
       if (interaction.customId.startsWith('application_accept_reason_modal:')) {
         return await handleApplicationAcceptReasonModal(interaction);
       }
