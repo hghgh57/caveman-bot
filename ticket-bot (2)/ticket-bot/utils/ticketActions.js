@@ -74,11 +74,10 @@ async function closeChannel(interaction) {
     }
   }
 
-  if (transcript && config.ticketLogChannelId) {
+  if (config.ticketLogChannelId) {
     await logToChannel(
       interaction,
-      `Ticket **#${interaction.channel.name}** closed by ${interaction.user} (opened by <@${meta.openerId}>).`,
-      [transcript]
+      `Ticket **#${interaction.channel.name}** closed by ${interaction.user} (opened by <@${meta.openerId}>).`
     );
   }
 
