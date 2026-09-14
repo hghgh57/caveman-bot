@@ -7,6 +7,7 @@ const {
   ButtonStyle,
 } = require('discord.js');
 const categories = require('../data/ticketCategories');
+const config = require('../config');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -18,9 +19,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setTitle('Create a ticket')
       .setColor(0x2b2d31)
-      .setDescription(
-        categories.map((c) => `${c.emoji} ${c.label}\n${c.description}`).join('\n')
-      );
+      .setDescription(config.ticketPanelDescription);
 
     const row = new ActionRowBuilder().addComponents(
       categories.map((c) =>
