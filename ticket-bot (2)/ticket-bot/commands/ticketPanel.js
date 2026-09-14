@@ -17,9 +17,9 @@ module.exports = {
 
   async execute(interaction) {
     const embed = new EmbedBuilder()
-      .setTitle('Create a ticket')
+      .setTitle(config.ticketPanel.title)
       .setColor(0x2b2d31)
-      .setDescription(config.ticketPanelDescription);
+      .setDescription(config.ticketPanel.description);
 
     const row = new ActionRowBuilder().addComponents(
       categories.map((c) =>
