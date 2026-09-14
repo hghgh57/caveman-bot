@@ -80,13 +80,21 @@ async function handleTicketOpen(interaction) {
   const catCfg = config.ticketCategories[categoryId] || {};
   const pingRoleId = catCfg.pingRoleId || config.staffRoleId;
 
-  const { channel, rolesWithAccess } = await createPrivateChannel({
-    guild,
-    name: `${categoryDef.id.replace(/_/g, '-')}-${interaction.user.username}`,
-    parentId: catCfg.categoryId,
-    openerId: interaction.user.id,
-    roleIds: [config.staffRoleId, pingRoleId, config.alwaysCanTypeRoleId],
-  });
+  let channel, rolesWithAccess;
+  try {
+    ({ channel, rolesWithAccess } = await createPrivateChannel({
+      guild,
+      name: `${categoryDef.id.replace(/_/g, '-')}-${interaction.user.username}`,
+      parentId: catCfg.categoryId,
+      openerId: interaction.user.id,
+      roleIds: [config.staffRoleId, pingRoleId, config.alwaysCanTypeRoleId],
+    }));
+  } catch (err) {
+    console.error('Failed to create ticket channel:', err);
+    return modalInteraction.editReply({
+      content: 'Something went wrong creating your ticket channel. Please tell staff.',
+    });
+  }
 
   ticketStore.add(channel.id, {
     type: 'ticket',
@@ -114,11 +122,20 @@ async function handleTicketOpen(interaction) {
   const pings = [`${interaction.user}`];
   if (pingRoleId) pings.push(`<@&${pingRoleId}>`);
 
-  await channel.send({
-    content: pings.join(' '),
-    embeds: [embed],
-    components: [unclaimedRow()],
-  });
+  try {
+    await channel.send({
+      content: pings.join(' '),
+      embeds: [embed],
+      components: [unclaimedRow()],
+    });
+  } catch (err) {
+    console.error('Failed to send ticket embed:', err);
+    ticketStore.remove(channel.id);
+    await channel.delete().catch(() => {});
+    return modalInteraction.editReply({
+      content: 'Something went wrong setting up your ticket. Please tell staff.',
+    });
+  }
 
   await modalInteraction.editReply({ content: `Your ticket has been created: ${channel}` });
 }
