@@ -1,8 +1,6 @@
 const {
   EmbedBuilder,
   ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -11,6 +9,7 @@ const config = require('../config');
 const ticketStore = require('../utils/ticketStore');
 const categories = require('../data/ticketCategories');
 const { createPrivateChannel } = require('../utils/ticketCreation');
+const { unclaimedRow } = require('../utils/ticketActions');
 
 const MODAL_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes to fill out the form
 
@@ -112,18 +111,13 @@ async function handleTicketOpen(interaction) {
     )
     .setColor(0x2b2d31);
 
-  const buttonsRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_claim_btn').setLabel('Claim').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('ticket_close_btn').setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
-  );
-
   const pings = [`${interaction.user}`];
   if (pingRoleId) pings.push(`<@&${pingRoleId}>`);
 
   await channel.send({
     content: pings.join(' '),
     embeds: [embed],
-    components: [buttonsRow],
+    components: [unclaimedRow()],
   });
 
   await modalInteraction.editReply({ content: `Your ticket has been created: ${channel}` });
