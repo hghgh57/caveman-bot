@@ -20,27 +20,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0x2b2d31)
       .setTitle("Tickets")
-      .setDescription(
-`<:ticketcoupon:1268607173936676958> **Support**
-
-> Open this if you want help or assistance with anything.
-
-<:Scammer:1543384286407688193> **Staff Report**
-
-> Open this if a staff / builder did something wrong.
-
-<:Spawner1:1477329125437079582> **Buy/Sell Spawner**
-
-> Open this if you want to buy/sell spawners.
-
-<:Giveaway:1487968608607928352> **Giveaway Claim**
-
-> Open this to claim a giveaway you won.
-
-<:Giveaway:1487968608607928352> **Giveaway Sponsor**
-
-> Open this if you want to sponsor a giveaway.`
-      );
+      .setDescription(config.ticketPanelDescription);
 
     const row = new ActionRowBuilder().addComponents(
       categories.map(c =>
