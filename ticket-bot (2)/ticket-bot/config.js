@@ -18,7 +18,8 @@ module.exports = {
   // directly to change the wording — it's sent exactly as written below.
   // The buttons themselves (labels + emoji) still come from
   // data/ticketCategories.js, this is just the description text above them.
-  ticketPanelDescription: `<:ticketcoupon:1268607173936676958> Support
+  ticketPanelDescription:
+`<:ticketcoupon:1268607173936676958> Support
 Open this if you want help or assistance with anything.
 <:Scammer:1543384286407688193> Staff Report
 Open this if a staff / builder did something wrong.
