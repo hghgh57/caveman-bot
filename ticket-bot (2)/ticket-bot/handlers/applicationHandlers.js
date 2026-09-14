@@ -285,7 +285,16 @@ async function handleApplicationOpenTicket(interaction) {
 
   // No Claim button here on purpose — application ticket, not a support ticket.
   const closeRow = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_close_btn').setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder()
+      .setCustomId('ticket_rename_btn')
+      .setLabel('Rename Ticket')
+      .setEmoji('✏️')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('ticket_close_btn')
+      .setLabel('Close Ticket')
+      .setEmoji('🔒')
+      .setStyle(ButtonStyle.Danger)
   );
 
   const pings = [`<@${meta.openerId}>`];
