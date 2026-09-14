@@ -5,14 +5,14 @@
 module.exports = [
   {
     id: 'support',
-    emoji: '<:ticketcoupon:1268607173936676958>',
+    emoji: '<:63756redticket:1549053777854726246>',
     label: 'Support',
     description: 'Open this if you want help or assistance with anything.',
     questions: ['What do you need help with?', "What's your IGN?"],
   },
   {
     id: 'staff_report',
-    emoji: '<:Scammer:1543384286407688193>',
+    emoji: '<:3392reportmessage:1549053747630710885>',
     label: 'Staff Report',
     description: 'Open this if a staff / builder did something wrong.',
     questions: [
@@ -23,7 +23,7 @@ module.exports = [
   },
   {
     id: 'buy_sell_spawner',
-    emoji: '<:Spawner1:1477329125437079582>',
+    emoji: '<:Spawner2342342:1533798050164637837>',
     label: 'Buy/Sell Spawner',
     description: 'Open this if you want to buy/sell spawners.',
     notes: 'Only buy/sell with users who have spawner perms.',
@@ -34,14 +34,14 @@ module.exports = [
   },
   {
     id: 'giveaway_claim',
-    emoji: '<:Giveaway:1487968608607928352>',
+    emoji: '<a:3899gift:1537021187450871859>',
     label: 'Giveaway Claim',
     description: 'Open this to claim a giveaway you won.',
     questions: ['How much have you won?', 'Who hosted the giveaway?'],
   },
   {
     id: 'giveaway_sponsor',
-    emoji: '<:Giveaway:1487968608607928352>',
+    emoji: '<a:3899gift:1537021187450871859>',
     label: 'Giveaway Sponsor',
     description: 'Open this if you want to sponsor a giveaway.',
     questions: ['How much do you want to sponsor?', "What's your IGN?"],
