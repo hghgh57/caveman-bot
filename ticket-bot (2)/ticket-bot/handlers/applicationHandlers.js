@@ -9,6 +9,10 @@ const {
   TextInputStyle,
 } = require('discord.js');
 const config = require('../config');
+const DECISION_COLORS = {
+  accepted: 0x57f287, // Discord green
+  denied: 0xed4245, // Discord red
+};
 const ticketStore = require('../utils/ticketStore');
 const applicationQuestions = require('../data/applicationQuestions');
 const { runApplicationFlow } = require('../utils/applicationFlow');
@@ -123,7 +127,17 @@ function decisionMessage(action, meta, actor, reason) {
 async function finalizeDecision(interaction, action, meta, reason) {
   const disabledRow = buildDecisionRow(getAppId(interaction), { disabled: true });
   const content = decisionMessage(action, meta, interaction.user, reason);
-  await interaction.message.edit({ content, components: [disabledRow] }).catch(() => {});
+
+  const [existingEmbed] = interaction.message.embeds;
+  const color = DECISION_COLORS[action];
+  const embeds =
+    existingEmbed && color !== undefined
+      ? [EmbedBuilder.from(existingEmbed).setColor(color)]
+      : undefined;
+
+  await interaction.message
+    .edit({ content, components: [disabledRow], ...(embeds ? { embeds } : {}) })
+    .catch(() => {});
 }
 
 function getOpenApplication(interaction) {
