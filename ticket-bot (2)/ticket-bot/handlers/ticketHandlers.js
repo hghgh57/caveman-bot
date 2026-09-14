@@ -85,7 +85,7 @@ async function handleTicketOpen(interaction) {
     name: `${categoryDef.id.replace(/_/g, '-')}-${interaction.user.username}`,
     parentId: catCfg.categoryId,
     openerId: interaction.user.id,
-    roleIds: [config.staffRoleId, pingRoleId],
+    roleIds: [config.staffRoleId, pingRoleId, config.alwaysCanTypeRoleId],
   });
 
   ticketStore.add(channel.id, {
