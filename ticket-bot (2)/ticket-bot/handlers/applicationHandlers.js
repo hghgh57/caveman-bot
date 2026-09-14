@@ -15,18 +15,19 @@ const { runApplicationFlow } = require('../utils/applicationFlow');
 const { buildDecisionRow } = require('../utils/applicationDecision');
 const { createPrivateChannel } = require('../utils/ticketCreation');
 const { isStaff } = require('../utils/permissions');
+const { bold } = require('../utils/textStyle');
 
 async function handleApplicationSelect(interaction) {
   const value = interaction.values[0];
   const appConfig = applicationQuestions[value];
   if (!appConfig) {
-    return interaction.reply({ content: 'Unknown application type.', ephemeral: true });
+    return interaction.reply({ content: bold('Unknown application type.'), ephemeral: true });
   }
 
   const existing = ticketStore.findOpenByUser(interaction.user.id, value);
   if (existing) {
     return interaction.reply({
-      content: 'You already have an open application of this type — check your DMs with the bot to continue it.',
+      content: bold('You already have an open application of this type — check your DMs with the bot to continue it.'),
       ephemeral: true,
     });
   }
@@ -34,7 +35,7 @@ async function handleApplicationSelect(interaction) {
   const appCfg = config.applicationCategories[value] || {};
   if (!appCfg.reviewChannelId) {
     return interaction.reply({
-      content: "This application type isn't fully set up yet (no review channel configured) — ask an admin to check config.js.",
+      content: bold("This application type isn't fully set up yet (no review channel configured) — ask an admin to check config.js."),
       ephemeral: true,
     });
   }
@@ -42,15 +43,17 @@ async function handleApplicationSelect(interaction) {
   const reviewChannel = await interaction.client.channels.fetch(appCfg.reviewChannelId).catch(() => null);
   if (!reviewChannel) {
     return interaction.reply({
-      content: "The review channel for this application type couldn't be found — ask an admin to check config.js.",
+      content: bold("The review channel for this application type couldn't be found — ask an admin to check config.js."),
       ephemeral: true,
     });
   }
 
   const introEmbed = new EmbedBuilder()
-    .setTitle(appConfig.label)
+    .setTitle(bold(appConfig.label))
     .setDescription(
-      `You'll be asked ${appConfig.questions.length} questions one at a time. Just type your answer here to move to the next one, or press Cancel at any point to stop.`
+      bold(
+        `You'll be asked ${appConfig.questions.length} questions one at a time. Just type your answer here to move to the next one, or press Cancel at any point to stop.`
+      )
     )
     .setColor(0x2b2d31);
 
@@ -60,12 +63,12 @@ async function handleApplicationSelect(interaction) {
     await dmChannel.send({ embeds: [introEmbed] });
   } catch (err) {
     return interaction.reply({
-      content: "I couldn't DM you to start the application — please enable direct messages from server members in your Privacy Settings and try again.",
+      content: bold("I couldn't DM you to start the application — please enable direct messages from server members in your Privacy Settings and try again."),
       ephemeral: true,
     });
   }
 
-  await interaction.reply({ content: "Check your DMs — I've started your application there!", ephemeral: true });
+  await interaction.reply({ content: bold("Check your DMs — I've started your application there!"), ephemeral: true });
 
   const appId = crypto.randomUUID();
   ticketStore.add(appId, {
@@ -104,9 +107,13 @@ function reasonModal(customId, title) {
 // by <staff>" line used both as the public confirmation and as the text
 // stamped on the review message once the buttons are disabled. Appends a
 // Reason line underneath when one was given.
+//
+// The mentions (<@id>) are left as literal ASCII so Discord renders them —
+// only the surrounding bot-authored words get the bold-Unicode treatment.
+// The reason itself is staff-typed text and is left exactly as written.
 function decisionMessage(action, meta, actor, reason) {
-  let msg = `<@${meta.openerId}>'s submission has been **${action}** successfully by ${actor}.`;
-  if (reason) msg += `\n**Reason:** ${reason}`;
+  let msg = `<@${meta.openerId}>${bold("'s submission has been")} **${bold(action)}** ${bold('successfully by')} ${actor}.`;
+  if (reason) msg += `\n**${bold('Reason')}:** ${reason}`;
   return msg;
 }
 
@@ -135,10 +142,10 @@ async function processAccept(interaction, appId, meta, reason) {
     try {
       const member = await interaction.guild.members.fetch(meta.openerId);
       await member.roles.add(roleId);
-      roleNote = ` <@&${roleId}> has been given to <@${meta.openerId}>.`;
+      roleNote = ` <@&${roleId}> ${bold('has been given to')} <@${meta.openerId}>.`;
     } catch (err) {
       console.error('Failed to add accepted role:', err);
-      roleNote = ' (Could not assign the accepted role automatically — check bot role position/permissions.)';
+      roleNote = ` ${bold('(Could not assign the accepted role automatically — check bot role position/permissions.)')}`;
     }
   }
 
@@ -149,8 +156,8 @@ async function processAccept(interaction, appId, meta, reason) {
   try {
     const applicant = await interaction.client.users.fetch(meta.openerId);
     const msg = reason
-      ? `🎉 Your application has been **accepted**!\n**Reason:** ${reason}`
-      : '🎉 Your application has been **accepted**! Staff will follow up if there are next steps.';
+      ? `🎉 ${bold('Your application has been')} **${bold('accepted')}**!\n**${bold('Reason')}:** ${reason}`
+      : `🎉 ${bold('Your application has been')} **${bold('accepted')}**! ${bold('Staff will follow up if there are next steps.')}`;
     await applicant.send(msg);
   } catch {
     // Applicant has DMs closed — nothing more we can do.
@@ -165,8 +172,8 @@ async function processDeny(interaction, appId, meta, reason) {
   try {
     const applicant = await interaction.client.users.fetch(meta.openerId);
     const msg = reason
-      ? `Your application was **denied**.\n**Reason:** ${reason}`
-      : "Your application was **denied**. You're welcome to apply again in the future.";
+      ? `${bold('Your application was')} **${bold('denied')}**.\n**${bold('Reason')}:** ${reason}`
+      : `${bold('Your application was')} **${bold('denied')}**. ${bold("You're welcome to apply again in the future.")}`;
     await applicant.send(msg);
   } catch {
     // Applicant has DMs closed — nothing more we can do.
@@ -175,11 +182,11 @@ async function processDeny(interaction, appId, meta, reason) {
 
 async function handleApplicationAccept(interaction) {
   if (!isStaff(interaction.member)) {
-    return interaction.reply({ content: 'Only staff can accept/deny applications.', ephemeral: true });
+    return interaction.reply({ content: bold('Only staff can accept/deny applications.'), ephemeral: true });
   }
   const { appId, meta } = getOpenApplication(interaction);
   if (!meta) {
-    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+    return interaction.reply({ content: bold('This application is no longer available (already handled, or the bot restarted).'), ephemeral: true });
   }
   await interaction.deferReply();
   await processAccept(interaction, appId, meta, null);
@@ -187,11 +194,11 @@ async function handleApplicationAccept(interaction) {
 
 async function handleApplicationAcceptReason(interaction) {
   if (!isStaff(interaction.member)) {
-    return interaction.reply({ content: 'Only staff can accept/deny applications.', ephemeral: true });
+    return interaction.reply({ content: bold('Only staff can accept/deny applications.'), ephemeral: true });
   }
   const { appId, meta } = getOpenApplication(interaction);
   if (!meta) {
-    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+    return interaction.reply({ content: bold('This application is no longer available (already handled, or the bot restarted).'), ephemeral: true });
   }
   await interaction.showModal(reasonModal(`application_accept_reason_modal:${appId}`, 'Accept with Reason'));
 }
@@ -199,7 +206,7 @@ async function handleApplicationAcceptReason(interaction) {
 async function handleApplicationAcceptReasonModal(interaction) {
   const { appId, meta } = getOpenApplication(interaction);
   if (!meta) {
-    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+    return interaction.reply({ content: bold('This application is no longer available (already handled, or the bot restarted).'), ephemeral: true });
   }
   await interaction.deferReply();
   const reason = interaction.fields.getTextInputValue('reason');
@@ -208,22 +215,22 @@ async function handleApplicationAcceptReasonModal(interaction) {
 
 async function handleApplicationDeny(interaction) {
   if (!isStaff(interaction.member)) {
-    return interaction.reply({ content: 'Only staff can accept/deny applications.', ephemeral: true });
+    return interaction.reply({ content: bold('Only staff can accept/deny applications.'), ephemeral: true });
   }
   const { appId, meta } = getOpenApplication(interaction);
   if (!meta) {
-    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+    return interaction.reply({ content: bold('This application is no longer available (already handled, or the bot restarted).'), ephemeral: true });
   }
   await processDeny(interaction, appId, meta, null);
 }
 
 async function handleApplicationDenyReason(interaction) {
   if (!isStaff(interaction.member)) {
-    return interaction.reply({ content: 'Only staff can accept/deny applications.', ephemeral: true });
+    return interaction.reply({ content: bold('Only staff can accept/deny applications.'), ephemeral: true });
   }
   const { appId, meta } = getOpenApplication(interaction);
   if (!meta) {
-    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+    return interaction.reply({ content: bold('This application is no longer available (already handled, or the bot restarted).'), ephemeral: true });
   }
   await interaction.showModal(reasonModal(`application_deny_reason_modal:${appId}`, 'Deny with Reason'));
 }
@@ -231,7 +238,7 @@ async function handleApplicationDenyReason(interaction) {
 async function handleApplicationDenyReasonModal(interaction) {
   const { appId, meta } = getOpenApplication(interaction);
   if (!meta) {
-    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+    return interaction.reply({ content: bold('This application is no longer available (already handled, or the bot restarted).'), ephemeral: true });
   }
   const reason = interaction.fields.getTextInputValue('reason');
   await processDeny(interaction, appId, meta, reason);
@@ -243,17 +250,17 @@ async function handleApplicationDenyReasonModal(interaction) {
 // gets pinged for that application type. This ticket has no Claim button.
 async function handleApplicationOpenTicket(interaction) {
   if (!isStaff(interaction.member)) {
-    return interaction.reply({ content: 'Only staff can open a ticket for an application.', ephemeral: true });
+    return interaction.reply({ content: bold('Only staff can open a ticket for an application.'), ephemeral: true });
   }
 
   const { appId, meta } = getOpenApplication(interaction);
   if (!meta) {
-    return interaction.reply({ content: 'This application is no longer available (already handled, or the bot restarted).', ephemeral: true });
+    return interaction.reply({ content: bold('This application is no longer available (already handled, or the bot restarted).'), ephemeral: true });
   }
 
   if (meta.ticketChannelId) {
     return interaction.reply({
-      content: `A ticket is already open for this application: <#${meta.ticketChannelId}>`,
+      content: `${bold('A ticket is already open for this application:')} <#${meta.ticketChannelId}>`,
       ephemeral: true,
     });
   }
@@ -272,14 +279,16 @@ async function handleApplicationOpenTicket(interaction) {
     roleIds: [config.staffRoleId, appCfg.pingRoleId],
   });
 
+  // Question text is bot-authored, so it gets bolded; each answer is the
+  // applicant's own typed text and is left exactly as they wrote it.
   const answersBlock = (meta.answers || [])
-    .map((a, i) => `**${i + 1}. ${a.question}**\n${a.answer}`)
+    .map((a, i) => `**${bold(`${i + 1}. ${a.question}`)}**\n${a.answer}`)
     .join('\n\n');
 
   const embed = new EmbedBuilder()
-    .setTitle(`${appConfig.label} — Ticket`)
+    .setTitle(bold(`${appConfig.label} — Ticket`))
     .setDescription(
-      `<@${meta.openerId}>, staff have opened a ticket to follow up on your application.${answersBlock ? `\n\n${answersBlock}` : ''}`
+      `<@${meta.openerId}>, ${bold('staff have opened a ticket to follow up on your application.')}${answersBlock ? `\n\n${answersBlock}` : ''}`
     )
     .setColor(0x2b2d31);
 
@@ -315,7 +324,7 @@ async function handleApplicationOpenTicket(interaction) {
 
   await interaction.message.edit({ components: [buildDecisionRow(appId, { ticketOpened: true })] }).catch(() => {});
 
-  await interaction.editReply(`Ticket created: ${channel}`);
+  await interaction.editReply(`${bold('Ticket created:')} ${channel}`);
 }
 
 module.exports = {
