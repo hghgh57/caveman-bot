@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ChannelType, EmbedBuilder } = require('discord.js');
 const { isBypassRole } = require('../utils/permissions');
+const { resolveEmojiShortcodes } = require('../utils/parseEmoji');
 
 // /embed — posts a custom embed anywhere. Restricted to config.alwaysCanTypeRoleId
 // only (not staff, not Administrator) — see utils/permissions.js#isBypassRole.
@@ -37,12 +38,13 @@ module.exports = {
       return interaction.reply({ content: 'You do not have permission to use this.', ephemeral: true });
     }
 
-    const title = interaction.options.getString('title');
-    const description = interaction.options.getString('description');
+    const guild = interaction.guild;
+    const title = resolveEmojiShortcodes(guild, interaction.options.getString('title'));
+    const description = resolveEmojiShortcodes(guild, interaction.options.getString('description'));
     const colorInput = interaction.options.getString('color');
     const image = interaction.options.getString('image');
     const thumbnail = interaction.options.getString('thumbnail');
-    const footer = interaction.options.getString('footer');
+    const footer = resolveEmojiShortcodes(guild, interaction.options.getString('footer'));
     const targetChannel = interaction.options.getChannel('channel') || interaction.channel;
 
     if (!title && !description && !image && !thumbnail) {
