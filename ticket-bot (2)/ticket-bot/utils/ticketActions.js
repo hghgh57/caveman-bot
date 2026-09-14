@@ -8,13 +8,15 @@ const {
   TextInputBuilder,
   TextInputStyle,
 } = require('discord.js');
+const config = require('../config');
 const ticketStore = require('./ticketStore');
 const { isStaff } = require('./permissions');
 const { buildTranscript } = require('./transcript');
 
 // This role always keeps SendMessages in a ticket, even after it's claimed
-// and every other role gets locked out.
-const ALWAYS_CAN_TYPE_ROLE_ID = '1534029586231332986';
+// and every other role gets locked out. Edit config.alwaysCanTypeRoleId to
+// change it.
+const ALWAYS_CAN_TYPE_ROLE_ID = config.alwaysCanTypeRoleId;
 
 async function closeChannel(interaction) {
   if (!isStaff(interaction.member)) {
@@ -26,7 +28,7 @@ async function closeChannel(interaction) {
     return interaction.reply({ content: 'This is not a ticket or application channel.', ephemeral: true });
   }
 
-  await interaction.reply(`${interaction.user} has closed this ticket, making transcript...`);
+  await interaction.reply('Closing ticket, making a transcript...');
 
   let transcript;
   try {
@@ -48,8 +50,6 @@ async function closeChannel(interaction) {
   }
 
   ticketStore.remove(interaction.channel.id);
-
-  await interaction.followUp('Deleting in 5 seconds...');
 
   setTimeout(() => {
     interaction.channel.delete().catch(() => {});
@@ -177,7 +177,7 @@ async function claimTicket(interaction) {
     components: [claimedRow()],
   });
   await interaction.followUp({
-    content: `🔒 Ticket claimed by ${interaction.user} — other staff can no longer type here (admins still can).`,
+    content: `${interaction.user} claimed this ticket`,
   });
 }
 
