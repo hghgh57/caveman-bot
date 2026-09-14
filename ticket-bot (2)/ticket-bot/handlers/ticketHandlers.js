@@ -92,7 +92,7 @@ async function handleTicketOpen(interaction) {
   } catch (err) {
     console.error('Failed to create ticket channel:', err);
     return modalInteraction.editReply({
-      content: 'Something went wrong creating your ticket channel. Please tell staff.',
+      content: `Something went wrong creating your ticket channel. Please tell staff.\n\`\`\`${err.message}\`\`\``,
     });
   }
 
@@ -133,7 +133,7 @@ async function handleTicketOpen(interaction) {
     ticketStore.remove(channel.id);
     await channel.delete().catch(() => {});
     return modalInteraction.editReply({
-      content: 'Something went wrong setting up your ticket. Please tell staff.',
+      content: `Something went wrong setting up your ticket. Please tell staff.\n\`\`\`${err.message}\`\`\``,
     });
   }
 
