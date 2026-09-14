@@ -18,7 +18,7 @@ module.exports = {
   // directly to change the wording — it's sent exactly as written below.
   // The buttons themselves (labels + emoji) still come from
   // data/ticketCategories.js, this is just the description text above them.
-.setDescription(
+  ticketPanelDescription:
 `<:ticketcoupon:1268607173936676958> **Support**
 
 > Open this if you want help or assistance with anything.
@@ -37,8 +37,8 @@ module.exports = {
 
 <:Giveaway:1487968608607928352> **Giveaway Sponsor**
 
-> Open this if you want to sponsor a giveaway.`
-)
+> Open this if you want to sponsor a giveaway.`,
+
   staffRoleId: '1534029589569998888',
 
   // Role that always keeps SendMessages in a support ticket, even after
