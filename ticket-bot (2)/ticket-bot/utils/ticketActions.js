@@ -18,6 +18,25 @@ const { buildTranscript } = require('./transcript');
 // change it.
 const ALWAYS_CAN_TYPE_ROLE_ID = config.alwaysCanTypeRoleId;
 
+// Simple one-line system-notice embed used for claim/unclaim/close/rename
+// notifications, so they look consistent instead of plain text.
+function systemEmbed(description) {
+  return new EmbedBuilder().setDescription(description).setColor(0x2b2d31);
+}
+
+// Posts a one-line embed (optionally with files, e.g. a transcript) to
+// config.ticketLogChannelId. Silently does nothing if that's not set, and
+// never throws — a logging failure shouldn't break the action itself.
+async function logToChannel(interaction, description, files) {
+  if (!config.ticketLogChannelId) return;
+  try {
+    const logChannel = await interaction.client.channels.fetch(config.ticketLogChannelId);
+    await logChannel.send({ embeds: [systemEmbed(description)], files });
+  } catch (err) {
+    console.error('Failed to post to ticket log channel:', err);
+  }
+}
+
 async function closeChannel(interaction) {
   if (!isStaff(interaction.member)) {
     return interaction.reply({ content: 'Only staff can close this.', ephemeral: true });
@@ -28,7 +47,7 @@ async function closeChannel(interaction) {
     return interaction.reply({ content: 'This is not a ticket or application channel.', ephemeral: true });
   }
 
-  await interaction.reply('Closing ticket, making a transcript...');
+  await interaction.reply({ embeds: [systemEmbed('🔒 Closing ticket, making a transcript...')] });
 
   let transcript;
   try {
@@ -40,25 +59,27 @@ async function closeChannel(interaction) {
   if (transcript && meta.openerId) {
     try {
       const opener = await interaction.client.users.fetch(meta.openerId);
-      await opener.send({
-        content: `Here's a transcript of your ticket **#${interaction.channel.name}**, closed by ${interaction.user.tag}.`,
-        files: [transcript],
-      });
+      const closedEmbed = new EmbedBuilder()
+        .setTitle('🔒 Ticket Closed')
+        .setDescription(
+          `Hello **${opener.username}**,\n\n` +
+            `Your ticket (\`${interaction.channel.name}\`) has been closed.\n` +
+            `A full transcript of your ticket conversation is attached below.`
+        )
+        .setColor(0x2b2d31)
+        .setTimestamp();
+      await opener.send({ files: [transcript], embeds: [closedEmbed] });
     } catch (err) {
       console.error('Failed to DM transcript to ticket opener:', err);
     }
   }
 
   if (transcript && config.ticketLogChannelId) {
-    try {
-      const logChannel = await interaction.client.channels.fetch(config.ticketLogChannelId);
-      await logChannel.send({
-        content: `Ticket **#${interaction.channel.name}** closed by ${interaction.user} (opened by <@${meta.openerId}>).`,
-        files: [transcript],
-      });
-    } catch (err) {
-      console.error('Failed to post transcript to log channel:', err);
-    }
+    await logToChannel(
+      interaction,
+      `Ticket **#${interaction.channel.name}** closed by ${interaction.user} (opened by <@${meta.openerId}>).`,
+      [transcript]
+    );
   }
 
   ticketStore.remove(interaction.channel.id);
@@ -83,9 +104,17 @@ async function renameChannel(interaction, newName) {
     .replace(/[^a-z0-9-]/g, '-')
     .slice(0, 90);
 
+  const oldName = interaction.channel.name;
   await interaction.channel.setName(sanitized);
 
-  await interaction.reply(`Channel renamed to "${sanitized}".`);
+  await interaction.reply({
+    embeds: [systemEmbed(`${interaction.user} renamed this ticket to \`${sanitized}\``)],
+  });
+
+  await logToChannel(
+    interaction,
+    `✏️ ${interaction.user} renamed ticket **#${oldName}** to \`${sanitized}\`.`
+  );
 }
 
 // Strips the footer off an embed and returns a fresh EmbedBuilder — used so
@@ -189,8 +218,13 @@ async function claimTicket(interaction) {
     components: [claimedRow()],
   });
   await interaction.followUp({
-    content: `${interaction.user} claimed this ticket`,
+    embeds: [systemEmbed(`${interaction.user} claimed this ticket`)],
   });
+
+  await logToChannel(
+    interaction,
+    `🔒 ${interaction.user} claimed ticket **#${interaction.channel.name}**.`
+  );
 }
 
 async function unclaimTicket(interaction) {
@@ -227,8 +261,13 @@ async function unclaimTicket(interaction) {
     components: [unclaimedRow()],
   });
   await interaction.followUp({
-    content: `🔓 Ticket unclaimed by ${interaction.user} — staff can type here again.`,
+    embeds: [systemEmbed(`🔓 Ticket unclaimed by ${interaction.user} — staff can type here again.`)],
   });
+
+  await logToChannel(
+    interaction,
+    `🔓 ${interaction.user} unclaimed ticket **#${interaction.channel.name}**.`
+  );
 }
 
 // Rename Ticket button — opens a small modal asking for the new name, since
