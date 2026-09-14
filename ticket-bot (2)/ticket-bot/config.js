@@ -23,19 +23,19 @@ module.exports = {
 
 > Open this if you want help or assistance with anything.
 
-<:Scammer:1543384286407688193> **Staff Report**
+**Staff Report**
 
 > Open this if a staff / builder did something wrong.
 
-<:Spawner1:1477329125437079582> **Buy/Sell Spawner**
+ **Buy/Sell Spawner**
 
 > Open this if you want to buy/sell spawners.
 
-<:Giveaway:1487968608607928352> **Giveaway Claim**
+ **Giveaway Claim**
 
 > Open this to claim a giveaway you won.
 
-<:Giveaway:1487968608607928352> **Giveaway Sponsor**
+ **Giveaway Sponsor**
 
 > Open this if you want to sponsor a giveaway.`,
 
