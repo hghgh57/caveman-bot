@@ -1,4 +1,5 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { bold } = require('./textStyle');
 
 // Builds the row of buttons shown under an application submission embed:
 // Accept, Accept with Reason, Deny, Deny with Reason, Open a Ticket.
@@ -11,27 +12,27 @@ function buildDecisionRow(appId, state = {}) {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId(`application_accept:${appId}`)
-      .setLabel('Accept')
+      .setLabel(bold('Accept'))
       .setStyle(ButtonStyle.Success)
       .setDisabled(disabled),
     new ButtonBuilder()
       .setCustomId(`application_accept_reason:${appId}`)
-      .setLabel('Accept with Reason')
+      .setLabel(bold('Accept with Reason'))
       .setStyle(ButtonStyle.Success)
       .setDisabled(disabled),
     new ButtonBuilder()
       .setCustomId(`application_deny:${appId}`)
-      .setLabel('Deny')
+      .setLabel(bold('Deny'))
       .setStyle(ButtonStyle.Danger)
       .setDisabled(disabled),
     new ButtonBuilder()
       .setCustomId(`application_deny_reason:${appId}`)
-      .setLabel('Deny with Reason')
+      .setLabel(bold('Deny with Reason'))
       .setStyle(ButtonStyle.Danger)
       .setDisabled(disabled),
     new ButtonBuilder()
       .setCustomId(`application_open_ticket:${appId}`)
-      .setLabel(ticketOpened ? 'Ticket Opened' : 'Open a Ticket')
+      .setLabel(bold(ticketOpened ? 'Ticket Opened' : 'Open a Ticket'))
       .setStyle(ButtonStyle.Primary)
       .setDisabled(disabled || ticketOpened)
   );
