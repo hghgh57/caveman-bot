@@ -4,6 +4,9 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
 } = require('discord.js');
 const ticketStore = require('./ticketStore');
 const points = require('./points');
@@ -88,17 +91,46 @@ function withoutFooter(embed) {
   return EmbedBuilder.from(data);
 }
 
+// Button rows shown on a ticket message. Claim Ticket is green (Success),
+// Rename Ticket is blurple (Primary), Close Ticket is red (Danger) with a
+// lock emoji. Claim Ticket flips to Unclaim Ticket (grey) once claimed.
 function claimedRow() {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_unclaim_btn').setLabel('Unclaim').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('ticket_close_btn').setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder()
+      .setCustomId('ticket_unclaim_btn')
+      .setLabel('Unclaim Ticket')
+      .setEmoji('✋')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('ticket_rename_btn')
+      .setLabel('Rename Ticket')
+      .setEmoji('✏️')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('ticket_close_btn')
+      .setLabel('Close Ticket')
+      .setEmoji('🔒')
+      .setStyle(ButtonStyle.Danger)
   );
 }
 
 function unclaimedRow() {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket_claim_btn').setLabel('Claim').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('ticket_close_btn').setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder()
+      .setCustomId('ticket_claim_btn')
+      .setLabel('Claim Ticket')
+      .setEmoji('✋')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId('ticket_rename_btn')
+      .setLabel('Rename Ticket')
+      .setEmoji('✏️')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('ticket_close_btn')
+      .setLabel('Close Ticket')
+      .setEmoji('🔒')
+      .setStyle(ButtonStyle.Danger)
   );
 }
 
@@ -191,6 +223,40 @@ async function unclaimTicket(interaction) {
   });
 }
 
+// Rename Ticket button — opens a small modal asking for the new name, since
+// buttons can't collect text input directly. The modal submit calls the same
+// renameChannel() used by /ticket-rename and /rename, so points/behavior stay
+// identical no matter how staff trigger a rename.
+function renameModal() {
+  const modal = new ModalBuilder().setCustomId('ticket_rename_modal').setTitle('Rename Ticket');
+  const nameInput = new TextInputBuilder()
+    .setCustomId('name')
+    .setLabel('New channel name')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMaxLength(90);
+  modal.addComponents(new ActionRowBuilder().addComponents(nameInput));
+  return modal;
+}
+
+async function handleRenameButton(interaction) {
+  if (!isStaff(interaction.member)) {
+    return interaction.reply({ content: 'Only staff can rename this.', ephemeral: true });
+  }
+
+  const meta = ticketStore.get(interaction.channel.id);
+  if (!meta) {
+    return interaction.reply({ content: 'This is not a ticket or application channel.', ephemeral: true });
+  }
+
+  await interaction.showModal(renameModal());
+}
+
+async function handleRenameModalSubmit(interaction) {
+  const newName = interaction.fields.getTextInputValue('name');
+  await renameChannel(interaction, newName);
+}
+
 // /ticket-add user:<user> — staff only, adds someone to whatever ticket or
 // application-ticket channel the command is run in.
 async function addUserToTicket(interaction, user) {
@@ -217,7 +283,11 @@ module.exports = {
   renameChannel,
   claimTicket,
   unclaimTicket,
+  handleRenameButton,
+  handleRenameModalSubmit,
   addUserToTicket,
+  claimedRow,
+  unclaimedRow,
   CLOSE_POINTS,
   RENAME_POINTS,
 };
