@@ -8,7 +8,6 @@ const {
 } = require('discord.js');
 const categories = require('../data/ticketCategories');
 const config = require('../config');
-const { parseEmoji } = require('../utils/parseEmoji');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -27,7 +26,7 @@ module.exports = {
         new ButtonBuilder()
           .setCustomId(`ticket_open_${c.id}`)
           .setLabel(c.label)
-          .setEmoji(parseEmoji(c.emoji))
+          .setEmoji(c.emoji || undefined)
           .setStyle(ButtonStyle.Secondary)
       )
     );
