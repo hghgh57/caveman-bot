@@ -19,7 +19,7 @@ module.exports = {
   // The buttons themselves (labels + emoji) still come from
   // data/ticketCategories.js, this is just the description text above them.
   ticketPanelDescription:
-`<:ticketcoupon:1268607173936676958> **Support**
+`**Support**
 
 > Open this if you want help or assistance with anything.
 
