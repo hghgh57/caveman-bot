@@ -6,27 +6,28 @@ const {
 } = require('discord.js');
 const ticketStore = require('./ticketStore');
 const { buildDecisionRow } = require('./applicationDecision');
+const { bold } = require('./textStyle');
 
 const QUESTION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes per question
 
 function cancelRow() {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('application_cancel').setLabel('Cancel').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId('application_cancel').setLabel(bold('Cancel')).setStyle(ButtonStyle.Secondary)
   );
 }
 
 function yesNoRow() {
   return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('application_yes').setLabel('Yes').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('application_no').setLabel('No').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('application_cancel').setLabel('Cancel').setStyle(ButtonStyle.Secondary)
+    new ButtonBuilder().setCustomId('application_yes').setLabel(bold('Yes')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('application_no').setLabel(bold('No')).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('application_cancel').setLabel(bold('Cancel')).setStyle(ButtonStyle.Secondary)
   );
 }
 
 function questionEmbed(question, index, total) {
   return new EmbedBuilder()
-    .setTitle(`Question ${index} of ${total}`)
-    .setDescription(question.text)
+    .setTitle(bold(`Question ${index} of ${total}`))
+    .setDescription(bold(question.text))
     .setColor(0x2b2d31);
 }
 
@@ -91,6 +92,10 @@ async function askQuestion(channel, userId, question, index, total) {
 // the guild, and when it landed. `startedAt` is the timestamp (ms) from when
 // the applicant picked this application type in the panel — set in
 // handlers/applicationHandlers.js when the appId is first created.
+//
+// Only the labels (UserId, Username, etc.) get the bold-Unicode treatment —
+// the values are left as plain ASCII since they contain a mention, a raw ID,
+// and Discord timestamp tags, all of which need literal characters to render.
 async function buildSubmissionStatsField(reviewChannel, user, startedAt) {
   const durationSec = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
 
@@ -102,19 +107,19 @@ async function buildSubmissionStatsField(reviewChannel, user, startedAt) {
   }
 
   const lines = [
-    `**UserId:** ${user.id}`,
-    `**Username:** ${user.username}`,
-    `**User:** ${user}`,
-    `**Duration:** ${durationSec}s`,
+    `**${bold('UserId')}:** ${user.id}`,
+    `**${bold('Username')}:** ${user.username}`,
+    `**${bold('User')}:** ${user}`,
+    `**${bold('Duration')}:** ${durationSec}s`,
   ];
 
   if (member?.joinedTimestamp) {
-    lines.push(`**Joined guild:** <t:${Math.floor(member.joinedTimestamp / 1000)}:R>`);
+    lines.push(`**${bold('Joined guild')}:** <t:${Math.floor(member.joinedTimestamp / 1000)}:R>`);
   }
 
-  lines.push(`**Submitted:** <t:${Math.floor(Date.now() / 1000)}:R>`);
+  lines.push(`**${bold('Submitted')}:** <t:${Math.floor(Date.now() / 1000)}:R>`);
 
-  return { name: 'Submission Stats', value: lines.join('\n') };
+  return { name: bold('Submission Stats'), value: lines.join('\n') };
 }
 
 // Walks the user through every question in `appConfig.questions` over DM,
@@ -141,9 +146,11 @@ async function runApplicationFlow(dmChannel, user, appConfig, opts) {
 
     if (result.cancelled) {
       await dmChannel.send(
-        result.timedOut
-          ? 'This application timed out due to inactivity.'
-          : 'This application was cancelled.'
+        bold(
+          result.timedOut
+            ? 'This application timed out due to inactivity.'
+            : 'This application was cancelled.'
+        )
       );
       ticketStore.remove(appId);
       return;
@@ -158,13 +165,17 @@ async function runApplicationFlow(dmChannel, user, appConfig, opts) {
 
   const statsField = await buildSubmissionStatsField(reviewChannel, user, startedAt);
 
+  // Question text is bot-authored, so it gets bolded; each answer is the
+  // applicant's own typed text and is left exactly as they wrote it.
   const embed = new EmbedBuilder()
-    .setTitle(`${appConfig.label} — Submission`)
+    .setTitle(bold(`${appConfig.label} — Submission`))
     .setColor(0x2b2d31)
     .setAuthor({ name: user.tag, iconURL: user.displayAvatarURL() })
-    .setDescription(answers.map((a, i) => `**${i + 1}. ${a.question}**\n${a.answer}`).join('\n\n'))
+    .setDescription(
+      answers.map((a, i) => `**${bold(`${i + 1}. ${a.question}`)}**\n${a.answer}`).join('\n\n')
+    )
     .addFields(statsField)
-    .setFooter({ text: `User ID: ${user.id}` })
+    .setFooter({ text: `${bold('User ID')}: ${user.id}` })
     .setTimestamp();
 
   await reviewChannel.send({
@@ -173,7 +184,9 @@ async function runApplicationFlow(dmChannel, user, appConfig, opts) {
     components: [buildDecisionRow(appId)],
   });
 
-  await dmChannel.send('Your application has been submitted. Staff will review it and follow up with you here.');
+  await dmChannel.send(
+    bold('Your application has been submitted. Staff will review it and follow up with you here.')
+  );
 }
 
 module.exports = { runApplicationFlow };
