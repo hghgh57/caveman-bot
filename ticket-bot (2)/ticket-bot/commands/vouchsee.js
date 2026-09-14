@@ -6,29 +6,28 @@ const {
   ButtonStyle,
 } = require('discord.js');
 const vouches = require('../utils/vouches');
-const { bold } = require('../utils/textStyle');
 
 const PAGE_SIZE = 5;
 const VOUCH_COLOR = 0xfee75c; // plain yellow, no emojis anywhere in this embed
 const COLLECTOR_TIME_MS = 5 * 60 * 1000; // 5 minutes to page through
 
+// Plain text throughout — the bold-unicode styling is reserved for
+// applications only.
 function buildEmbed(target, entries, page, totalPages) {
   const start = page * PAGE_SIZE;
   const pageEntries = entries.slice(start, start + PAGE_SIZE);
 
-  // Numbering/"No comment left." are bot-authored text so they get bolded;
-  // a left comment is the voucher's own typed text, left exactly as written.
   const description = pageEntries.length
     ? pageEntries
         .map((entry, i) => {
-          const line = `**${bold(`${start + i + 1}.`)}** <@${entry.voucherId}>`;
-          return `${line}\n${entry.comment ? entry.comment : bold('No comment left.')}`;
+          const line = `${start + i + 1}. <@${entry.voucherId}>`;
+          return `${line}\n${entry.comment ? entry.comment : 'No comment left.'}`;
         })
         .join('\n\n')
-    : bold('No vouches yet.');
+    : 'No vouches yet.';
 
   return new EmbedBuilder()
-    .setTitle(bold(`${target.username}'s Vouches`))
+    .setTitle(`${target.username}'s Vouches`)
     .setDescription(description)
     .setColor(VOUCH_COLOR)
     .setFooter({
@@ -81,7 +80,7 @@ module.exports = {
 
     collector.on('collect', async (i) => {
       if (i.user.id !== interaction.user.id) {
-        return i.reply({ content: bold("These buttons aren't for you."), ephemeral: true });
+        return i.reply({ content: "These buttons aren't for you.", ephemeral: true });
       }
 
       if (i.customId === 'vouchsee_prev') page = Math.max(0, page - 1);
