@@ -113,9 +113,9 @@ async function handleTicketOpen(interaction) {
   const notesBlock = categoryDef.notes ? `\n\n⚠️ ${categoryDef.notes}` : '';
 
   const embed = new EmbedBuilder()
-    .setTitle(`${categoryDef.emoji} ${categoryDef.label}`)
+    .setTitle(categoryDef.label)
     .setDescription(
-      `${interaction.user}, thanks for opening a ticket.\n\n${categoryDef.description}${notesBlock}${answersBlock}\n\nStaff will be with you shortly.`
+      `${categoryDef.emoji} ${interaction.user}, thanks for opening a ticket.\n\n${categoryDef.description}${notesBlock}${answersBlock}\n\nStaff will be with you shortly.`
     )
     .setColor(0x2b2d31);
 
