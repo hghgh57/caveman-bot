@@ -24,6 +24,10 @@ module.exports = {
   // granted access to every new ticket when it's created.
   alwaysCanTypeRoleId: '1534029586231332986',
 
+  // Channel where a copy of every ticket's transcript gets posted when it's
+  // closed (in addition to DMing it to whoever opened the ticket).
+  ticketLogChannelId: '1534030311992721478',
+
   // Per-ticket-type settings. Keys must match the `id` values in
   // data/ticketCategories.js. Each one can go to its own category channel
   // and ping its own role. Leave pingRoleId as '' to only ping staffRoleId.
