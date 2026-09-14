@@ -14,6 +14,21 @@ module.exports = {
 
   // ---- Everything below: edit these values directly ----
 
+  // The text shown in the embed when /ticket-panel is run. Edit this
+  // directly to change the wording — it's sent exactly as written below.
+  // The buttons themselves (labels + emoji) still come from
+  // data/ticketCategories.js, this is just the description text above them.
+  ticketPanelDescription: `<:ticketcoupon:1268607173936676958> Support
+Open this if you want help or assistance with anything.
+<:Scammer:1543384286407688193> Staff Report
+Open this if a staff / builder did something wrong.
+<:Spawner1:1477329125437079582> Buy/Sell Spawner
+Open this if you want to buy/sell spawners
+<:Giveaway:1487968608607928352> Giveaway Claim
+Open this to claim a giveaway you won.
+<:Giveaway:1487968608607928352> Giveaway Sponsor
+Open this if you want to sponsor a giveaway`,
+
   // Role allowed to use /ticket-close, /ticket-rename, /point-leaderboard,
   // and accept/decline applications. Also always gets access to every
   // ticket/application channel regardless of the per-type settings below.
