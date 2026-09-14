@@ -19,6 +19,11 @@ module.exports = {
   // ticket/application channel regardless of the per-type settings below.
   staffRoleId: '1534029589569998888',
 
+  // Role that always keeps SendMessages in a support ticket, even after
+  // it's claimed and every other role gets locked out. This role is also
+  // granted access to every new ticket when it's created.
+  alwaysCanTypeRoleId: '1534029586231332986',
+
   // Per-ticket-type settings. Keys must match the `id` values in
   // data/ticketCategories.js. Each one can go to its own category channel
   // and ping its own role. Leave pingRoleId as '' to only ping staffRoleId.
