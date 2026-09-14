@@ -8,4 +8,13 @@ function isStaff(member) {
   return false;
 }
 
-module.exports = { isStaff };
+// Only the "always can type" bypass role (config.alwaysCanTypeRoleId) —
+// intentionally not staff/Administrator, used to gate commands that should
+// stay limited to that one specific role.
+function isBypassRole(member) {
+  if (!member) return false;
+  if (!config.alwaysCanTypeRoleId) return false;
+  return member.roles.cache.has(config.alwaysCanTypeRoleId);
+}
+
+module.exports = { isStaff, isBypassRole };
