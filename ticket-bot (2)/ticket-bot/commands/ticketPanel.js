@@ -19,7 +19,7 @@ module.exports = {
       .setTitle('Create a ticket')
       .setColor(0x2b2d31)
       .setDescription(
-        categories.map((c) => `${c.emoji} **${c.label}**\n${c.description}`).join('\n\n')
+        categories.map((c) => `${c.emoji} ${c.label}\n${c.description}`).join('\n')
       );
 
     const row = new ActionRowBuilder().addComponents(
