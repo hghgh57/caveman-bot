@@ -9,12 +9,12 @@ const {
   TextInputStyle,
 } = require('discord.js');
 const ticketStore = require('./ticketStore');
-const points = require('./points');
 const { isStaff } = require('./permissions');
 const { buildTranscript } = require('./transcript');
 
-const CLOSE_POINTS = 2;
-const RENAME_POINTS = 3;
+// This role always keeps SendMessages in a ticket, even after it's claimed
+// and every other role gets locked out.
+const ALWAYS_CAN_TYPE_ROLE_ID = '1534029586231332986';
 
 async function closeChannel(interaction) {
   if (!isStaff(interaction.member)) {
@@ -47,12 +47,9 @@ async function closeChannel(interaction) {
     }
   }
 
-  const newTotal = points.addPoints(interaction.user.id, CLOSE_POINTS);
   ticketStore.remove(interaction.channel.id);
 
-  await interaction.followUp(
-    `+${CLOSE_POINTS} points awarded to ${interaction.user} (total: ${newTotal}). Deleting in 5 seconds...`
-  );
+  await interaction.followUp('Deleting in 5 seconds...');
 
   setTimeout(() => {
     interaction.channel.delete().catch(() => {});
@@ -75,11 +72,8 @@ async function renameChannel(interaction, newName) {
     .slice(0, 90);
 
   await interaction.channel.setName(sanitized);
-  const newTotal = points.addPoints(interaction.user.id, RENAME_POINTS);
 
-  await interaction.reply(
-    `Channel renamed to "${sanitized}". +${RENAME_POINTS} points awarded to ${interaction.user} (total: ${newTotal}).`
-  );
+  await interaction.reply(`Channel renamed to "${sanitized}".`);
 }
 
 // Strips the footer off an embed and returns a fresh EmbedBuilder — used so
@@ -138,8 +132,9 @@ function unclaimedRow() {
 // access to it (the staff role + that category's ping role), then grants
 // SendMessages back to just the claiming staff member. Administrators are
 // unaffected since Discord's Administrator permission bypasses channel
-// overwrites entirely, and the ticket opener's own overwrite is never
-// touched, so they can keep talking.
+// overwrites entirely, the ticket opener's own overwrite is never touched so
+// they can keep talking, and ALWAYS_CAN_TYPE_ROLE_ID is skipped entirely so
+// that role can always type even in a claimed ticket.
 async function claimTicket(interaction) {
   if (!isStaff(interaction.member)) {
     return interaction.reply({ content: 'Only staff can claim tickets.', ephemeral: true });
@@ -160,6 +155,7 @@ async function claimTicket(interaction) {
 
   const roleIds = meta.rolesWithAccess || [];
   for (const roleId of roleIds) {
+    if (roleId === ALWAYS_CAN_TYPE_ROLE_ID) continue; // this role always keeps access
     await interaction.channel.permissionOverwrites.edit(roleId, { SendMessages: false }).catch(() => {});
   }
   await interaction.channel.permissionOverwrites
@@ -225,7 +221,7 @@ async function unclaimTicket(interaction) {
 
 // Rename Ticket button — opens a small modal asking for the new name, since
 // buttons can't collect text input directly. The modal submit calls the same
-// renameChannel() used by /ticket-rename and /rename, so points/behavior stay
+// renameChannel() used by /ticket-rename and /rename, so behavior stays
 // identical no matter how staff trigger a rename.
 function renameModal() {
   const modal = new ModalBuilder().setCustomId('ticket_rename_modal').setTitle('Rename Ticket');
@@ -288,6 +284,4 @@ module.exports = {
   addUserToTicket,
   claimedRow,
   unclaimedRow,
-  CLOSE_POINTS,
-  RENAME_POINTS,
 };
