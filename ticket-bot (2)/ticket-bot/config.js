@@ -19,23 +19,23 @@ module.exports = {
   // The buttons themselves (labels + emoji) still come from
   // data/ticketCategories.js, this is just the description text above them.
   ticketPanelDescription:
-`**Support**
+`<:63756redticket:1549053777854726246> **Support**
 
 > Open this if you want help or assistance with anything.
 
-**Staff Report**
+<:3392reportmessage:1549053747630710885> **Staff Report**
 
 > Open this if a staff / builder did something wrong.
 
- **Buy/Sell Spawner**
+ <:Spawner2342342:1533798050164637837> **Buy/Sell Spawner**
 
 > Open this if you want to buy/sell spawners.
 
- **Giveaway Claim**
+<a:3899gift:1537021187450871859> **Giveaway Claim**
 
 > Open this to claim a giveaway you won.
 
- **Giveaway Sponsor**
+ <a:3899gift:1537021187450871859> **Giveaway Sponsor**
 
 > Open this if you want to sponsor a giveaway.`,
 
