@@ -30,7 +30,7 @@ ticketPanel: {
 
 <:Spawner1:1477329125437079582> **Buy/Sell Spawner**
 
-> Open this if you want to buy/sell spawners
+> Open this if you want to buy/sell spawners.
 
 <:Giveaway:1487968608607928352> **Giveaway Claim**
 
