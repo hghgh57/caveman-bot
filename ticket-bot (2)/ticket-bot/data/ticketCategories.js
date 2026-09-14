@@ -28,6 +28,7 @@ module.exports = [
     description: 'Open this if you want to buy/sell spawners.',
     notes: 'Only buy/sell with users who have spawner perms.',
     questions: ['How many spawners are you buying/selling?'],
+     questions: ['Only buy/sell spawners with users who have spawner perms!'],
   },
   {
     id: 'giveaway_claim',
